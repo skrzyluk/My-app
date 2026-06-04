@@ -1,12 +1,26 @@
 import os
+import sys
 from pathlib import Path
 
 APP_NAME = "YouTubeNotifier"
 APP_VERSION = "0.1.0"
 
 APPDATA_DIR = Path(os.environ.get("APPDATA", Path.home())) / APP_NAME
-CLIENT_SECRETS_PATH = APPDATA_DIR / "client_secrets.json"
 LOG_PATH = APPDATA_DIR / "app.log"
+
+
+def get_client_secrets_path() -> Path:
+    """Resolve client_secrets.json location.
+
+    When running as a PyInstaller bundle, the file is extracted to _MEIPASS.
+    During development it lives in the project root.
+    """
+    if hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS) / "client_secrets.json"
+    return Path(__file__).resolve().parent.parent / "client_secrets.json"
+
+
+CLIENT_SECRETS_PATH = get_client_secrets_path()
 
 KEYRING_SERVICE = APP_NAME
 KEYRING_USER = "refresh_token"
