@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from google.oauth2.credentials import Credentials
 
+import i18n
 from services.auth_service import AuthService, AuthError, ClientSecretsNotFoundError
 from utils.logger import get_logger
 
@@ -42,7 +43,7 @@ class LoginWindow(QMainWindow):
         super().__init__()
         self._auth = AuthService()
         self._worker: _AuthWorker | None = None
-        self.setWindowTitle("YouTube Notifier")
+        self.setWindowTitle(i18n.tr("window_title"))
         self.setFixedSize(360, 240)
         self._build_ui()
         self._try_auto_login()
@@ -55,15 +56,15 @@ class LoginWindow(QMainWindow):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(20)
 
-        self.title = QLabel("YouTube Notifier")
-        self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.title)
+        self._title_lbl = QLabel(i18n.tr("app_title"))
+        self._title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._title_lbl)
 
         self.status_label = QLabel("")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.status_label)
 
-        self.login_btn = QPushButton("Zaloguj się przez Google")
+        self.login_btn = QPushButton(i18n.tr("btn_login"))
         self.login_btn.setFixedWidth(220)
         self.login_btn.clicked.connect(self._on_login)
         layout.addWidget(self.login_btn, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -71,11 +72,11 @@ class LoginWindow(QMainWindow):
     def _try_auto_login(self):
         if not self._auth.is_logged_in():
             return
-        self._set_busy("Logowanie…")
+        self._set_busy(i18n.tr("status_logging_in"))
         self._run_worker(auto_login=True)
 
     def _on_login(self):
-        self._set_busy("Otwieranie przeglądarki…")
+        self._set_busy(i18n.tr("status_opening_browser"))
         self._run_worker(auto_login=False)
 
     def _run_worker(self, auto_login: bool):
@@ -92,7 +93,7 @@ class LoginWindow(QMainWindow):
 
     def _on_auth_error(self, message: str):
         self._set_idle()
-        QMessageBox.critical(self, "Błąd logowania", message)
+        QMessageBox.critical(self, i18n.tr("dlg_auth_error"), message)
 
     def _set_busy(self, text: str):
         self.status_label.setText(text)

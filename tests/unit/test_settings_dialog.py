@@ -16,9 +16,10 @@ def db():
 
 @pytest.fixture
 def dialog(qtbot, db):
-    dlg = SettingsDialog(db)
-    qtbot.addWidget(dlg)
-    return dlg, db
+    with patch("ui.settings_dialog.AppSettings"):
+        dlg = SettingsDialog(db)
+        qtbot.addWidget(dlg)
+        yield dlg, db
 
 
 class TestSettingsLoad:

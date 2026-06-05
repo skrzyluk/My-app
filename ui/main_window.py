@@ -9,6 +9,7 @@ from PyQt6.QtGui import QIcon, QCloseEvent
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from google.oauth2.credentials import Credentials
 
+import i18n
 from database.db import Database
 from models.video import Video
 from services.video_provider import VideoProvider
@@ -17,10 +18,10 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-_PERIODS = [
-    ("today", "Dzisiaj"),
-    ("week",  "Tydzień"),
-    ("month", "Miesiąc"),
+_PERIOD_KEYS = [
+    ("today", "tab_today"),
+    ("week",  "tab_week"),
+    ("month", "tab_month"),
 ]
 
 _SHORT_MONTHS = [
@@ -98,10 +99,10 @@ class _VideoCard(QFrame):
         meta.setStyleSheet("color: gray;")
         meta_row.addWidget(meta)
         meta_row.addStretch()
-        copy_btn = QPushButton("Kopiuj")
-        copy_btn.setFixedWidth(70)
-        copy_btn.clicked.connect(self._copy)
-        meta_row.addWidget(copy_btn)
+        self._copy_btn = QPushButton(i18n.tr("btn_copy"))
+        self._copy_btn.setFixedWidth(70)
+        self._copy_btn.clicked.connect(self._copy)
+        meta_row.addWidget(self._copy_btn)
         layout.addLayout(meta_row)
 
         if self._video.description:
@@ -145,7 +146,7 @@ class MainWindow(QMainWindow):
         self._bg_worker = None
         self._quitting = False
 
-        self.setWindowTitle("YouTube Notifier")
+        self.setWindowTitle(i18n.tr("window_title"))
         self.setMinimumSize(700, 550)
         self._build_ui()
         self._setup_tray()
@@ -194,8 +195,8 @@ class MainWindow(QMainWindow):
         layout.setSpacing(4)
 
         self._tab_buttons: dict[str, QPushButton] = {}
-        for key, label in _PERIODS:
-            btn = QPushButton(label)
+        for key, tr_key in _PERIOD_KEYS:
+            btn = QPushButton(i18n.tr(tr_key))
             btn.setCheckable(True)
             btn.setFixedHeight(32)
             btn.clicked.connect(lambda _checked, p=key: self._on_tab(p))
@@ -211,25 +212,51 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(8)
 
-        self._refresh_btn = QPushButton("↻ Odśwież")
+        self._refresh_btn = QPushButton(i18n.tr("btn_refresh"))
         self._refresh_btn.clicked.connect(self._on_refresh)
         layout.addWidget(self._refresh_btn)
 
-        self._copy_all_btn = QPushButton("Skopiuj wszystko")
+        self._copy_all_btn = QPushButton(i18n.tr("btn_copy_all"))
         self._copy_all_btn.clicked.connect(self._on_copy_all)
         layout.addWidget(self._copy_all_btn)
 
         layout.addStretch()
 
-        history_btn = QPushButton("Historia")
-        history_btn.clicked.connect(self._on_history)
-        layout.addWidget(history_btn)
+        self._history_btn = QPushButton(i18n.tr("btn_history"))
+        self._history_btn.clicked.connect(self._on_history)
+        layout.addWidget(self._history_btn)
 
-        settings_btn = QPushButton("Ustawienia")
-        settings_btn.clicked.connect(self._on_settings)
-        layout.addWidget(settings_btn)
+        self._settings_btn = QPushButton(i18n.tr("btn_settings"))
+        self._settings_btn.clicked.connect(self._on_settings)
+        layout.addWidget(self._settings_btn)
 
         return bar
+
+    # ------------------------------------------------------------------ #
+    # Translation                                                         #
+    # ------------------------------------------------------------------ #
+
+    def retranslateUi(self):
+        """Re-apply all translatable strings after a language change."""
+        self.setWindowTitle(i18n.tr("window_title"))
+        for key, tr_key in _PERIOD_KEYS:
+            self._tab_buttons[key].setText(i18n.tr(tr_key))
+        self._refresh_btn.setText(i18n.tr("btn_refresh"))
+        self._copy_all_btn.setText(i18n.tr("btn_copy_all"))
+        self._history_btn.setText(i18n.tr("btn_history"))
+        self._settings_btn.setText(i18n.tr("btn_settings"))
+        if self._tray:
+            self._rebuild_tray_menu()
+
+    def _rebuild_tray_menu(self):
+        if not self._tray:
+            return
+        menu = QMenu()
+        menu.addAction(i18n.tr("tray_open"), self._show_window)
+        menu.addAction(i18n.tr("tray_refresh"), self._on_refresh)
+        menu.addSeparator()
+        menu.addAction(i18n.tr("tray_quit"), self._quit_app)
+        self._tray.setContextMenu(menu)
 
     # ------------------------------------------------------------------ #
     # System tray                                                         #
@@ -241,15 +268,8 @@ class MainWindow(QMainWindow):
             return
 
         self._tray = QSystemTrayIcon(_app_icon(), self)
-        self._tray.setToolTip("YouTube Notifier")
-
-        menu = QMenu()
-        menu.addAction("Otwórz", self._show_window)
-        menu.addAction("↻ Odśwież", self._on_refresh)
-        menu.addSeparator()
-        menu.addAction("Wyjdź", self._quit_app)
-        self._tray.setContextMenu(menu)
-
+        self._tray.setToolTip(i18n.tr("app_title"))
+        self._rebuild_tray_menu()
         self._tray.activated.connect(self._on_tray_activated)
         self._tray.show()
 
@@ -308,7 +328,7 @@ class MainWindow(QMainWindow):
     def _load_videos(self, force: bool = False):
         if self._worker and self._worker.isRunning():
             return
-        self._set_busy("Ładowanie…")
+        self._set_busy(i18n.tr("status_loading"))
         self._worker = _FetchWorker(self._provider, self._current_period, force=force)
         self._worker.finished.connect(self._on_videos_loaded)
         self._worker.error.connect(self._on_fetch_error)
@@ -319,16 +339,19 @@ class MainWindow(QMainWindow):
         self._render_videos(videos)
         count = len(videos)
         if count == 0:
-            self._status_label.setText("Brak nowych filmów w tym okresie.")
+            self._status_label.setText(i18n.tr("status_no_videos"))
         else:
-            noun = "film" if count == 1 else ("filmy" if 2 <= count <= 4 else "filmów")
-            self._status_label.setText(f"{count} {noun}")
+            noun_key = (
+                "video_singular" if count == 1
+                else ("video_2_4" if 2 <= count <= 4 else "video_many")
+            )
+            self._status_label.setText(f"{count} {i18n.tr(noun_key)}")
         self._set_idle()
 
     def _on_fetch_error(self, message: str):
         self._set_idle()
-        self._status_label.setText("Błąd ładowania.")
-        QMessageBox.critical(self, "Błąd", message)
+        self._status_label.setText(i18n.tr("status_error"))
+        QMessageBox.critical(self, i18n.tr("dlg_error"), message)
 
     def _render_videos(self, videos: list[Video]):
         while self._videos_layout.count() > 1:
@@ -337,14 +360,14 @@ class MainWindow(QMainWindow):
                 item.widget().deleteLater()
 
         if not videos:
-            placeholder = QLabel("Brak filmów do wyświetlenia.")
+            placeholder = QLabel(i18n.tr("placeholder_no_videos"))
             placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
             placeholder.setStyleSheet("color: gray; padding: 40px;")
             self._videos_layout.insertWidget(0, placeholder)
             return
 
-        for i, video in enumerate(videos):
-            self._videos_layout.insertWidget(i, _VideoCard(video))
+        for idx, video in enumerate(videos):
+            self._videos_layout.insertWidget(idx, _VideoCard(video))
 
     def _set_busy(self, text: str):
         self._status_label.setText(text)
@@ -375,8 +398,18 @@ class MainWindow(QMainWindow):
 
     def _on_settings(self):
         from ui.settings_dialog import SettingsDialog
+        from config.theme import apply_theme
         dlg = SettingsDialog(self._db, self)
-        if dlg.exec() and dlg.logout_requested:
+        dlg.exec()
+
+        # Apply any changed settings immediately
+        lang = self._db.get_setting("language", "pl") or "pl"
+        i18n.set_language(lang)
+        self.retranslateUi()
+        theme = self._db.get_setting("theme", "system") or "system"
+        apply_theme(QApplication.instance(), theme)
+
+        if dlg.logout_requested:
             self._handle_logout()
 
     def _handle_logout(self):

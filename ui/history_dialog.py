@@ -6,13 +6,14 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 
+import i18n
 from database.db import Database
 from models.summary import Summary
 
-_PERIOD_LABELS = {
-    "today": "Dzisiaj",
-    "week":  "Tydzień",
-    "month": "Miesiąc",
+_PERIOD_TR_KEYS = {
+    "today": "tab_today",
+    "week":  "tab_week",
+    "month": "tab_month",
 }
 
 _POLISH_MONTHS = [
@@ -30,7 +31,7 @@ class HistoryDialog(QDialog):
     def __init__(self, db: Database, parent=None):
         super().__init__(parent)
         self._db = db
-        self.setWindowTitle("Historia podsumowań")
+        self.setWindowTitle(i18n.tr("dlg_history_title"))
         self.setMinimumSize(560, 450)
         self._build_ui()
 
@@ -39,12 +40,12 @@ class HistoryDialog(QDialog):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
 
-        header = QLabel("Historia podsumowań")
-        f = header.font()
+        self._header = QLabel(i18n.tr("dlg_history_title"))
+        f = self._header.font()
         f.setPointSize(13)
         f.setBold(True)
-        header.setFont(f)
-        layout.addWidget(header)
+        self._header.setFont(f)
+        layout.addWidget(self._header)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -57,24 +58,24 @@ class HistoryDialog(QDialog):
         scroll.setWidget(container)
         layout.addWidget(scroll, stretch=1)
 
-        close_btn = QPushButton("Zamknij")
-        close_btn.setFixedWidth(100)
-        close_btn.clicked.connect(self.accept)
-        layout.addWidget(close_btn, alignment=Qt.AlignmentFlag.AlignRight)
+        self._close_btn = QPushButton(i18n.tr("btn_close"))
+        self._close_btn.setFixedWidth(100)
+        self._close_btn.clicked.connect(self.accept)
+        layout.addWidget(self._close_btn, alignment=Qt.AlignmentFlag.AlignRight)
 
         self._populate()
 
     def _populate(self):
         summaries = self._db.get_summaries()
         if not summaries:
-            placeholder = QLabel("Brak zapisanych podsumowań.")
+            placeholder = QLabel(i18n.tr("lbl_no_summaries"))
             placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
             placeholder.setStyleSheet("color: gray; padding: 40px;")
             self._items_layout.insertWidget(0, placeholder)
             return
 
-        for i, summary in enumerate(summaries):
-            self._items_layout.insertWidget(i, self._make_card(summary))
+        for idx, summary in enumerate(summaries):
+            self._items_layout.insertWidget(idx, self._make_card(summary))
 
     def _make_card(self, summary: Summary) -> QFrame:
         card = QFrame()
@@ -92,17 +93,16 @@ class HistoryDialog(QDialog):
         date_lbl.setFont(f)
         top.addWidget(date_lbl)
 
-        period_lbl = QLabel(_PERIOD_LABELS.get(summary.period, summary.period))
-        period_lbl.setStyleSheet("color: gray;")
-        top.addWidget(period_lbl)
+        period_key = _PERIOD_TR_KEYS.get(summary.period, "tab_today")
+        top.addWidget(QLabel(i18n.tr(period_key)))
 
-        count_lbl = QLabel(f"({summary.videos_count} filmów)")
+        count_lbl = QLabel(i18n.tr("lbl_videos_count_fmt").format(summary.videos_count))
         count_lbl.setStyleSheet("color: gray;")
         top.addWidget(count_lbl)
 
         top.addStretch()
 
-        copy_btn = QPushButton("Kopiuj")
+        copy_btn = QPushButton(i18n.tr("btn_copy"))
         copy_btn.setFixedWidth(70)
         copy_btn.clicked.connect(
             lambda _checked=False, t=summary.summary_text: QApplication.clipboard().setText(t)
