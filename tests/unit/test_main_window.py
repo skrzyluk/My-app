@@ -53,8 +53,8 @@ class TestMainWindowInit:
 
     def test_minimum_size(self, window):
         w, _ = window
-        assert w.minimumWidth() == 700
-        assert w.minimumHeight() == 550
+        assert w.minimumWidth() == 720
+        assert w.minimumHeight() == 580
 
     def test_default_tab_is_today(self, window):
         w, _ = window
@@ -91,12 +91,9 @@ class TestVideoRendering:
     def test_empty_list_shows_placeholder(self, window):
         w, _ = window
         w._on_videos_loaded([])
-        labels = [
-            w._videos_layout.itemAt(i).widget()
-            for i in range(w._videos_layout.count())
-            if w._videos_layout.itemAt(i).widget()
-        ]
-        texts = [lbl.text() for lbl in labels if hasattr(lbl, "text")]
+        from PyQt6.QtWidgets import QLabel
+        all_labels = w._videos_container.findChildren(QLabel)
+        texts = [lbl.text() for lbl in all_labels]
         assert any("Brak" in t for t in texts)
 
     def test_videos_render_cards(self, window):
