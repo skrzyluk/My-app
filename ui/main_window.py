@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QLabel, QScrollArea, QFrame, QApplication, QMessageBox,
+    QLabel, QScrollArea, QFrame, QApplication, QMessageBox, QMenu, QSystemTrayIcon,
 )
+from PyQt6.QtGui import QIcon, QCloseEvent
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from google.oauth2.credentials import Credentials
 
@@ -26,11 +28,23 @@ _SHORT_MONTHS = [
     "lip", "sie", "wrz", "paź", "lis", "gru",
 ]
 
+_ICON_PATH = Path(__file__).resolve().parent.parent / "resources" / "icon.ico"
+
 
 def _fmt_date(dt: datetime) -> str:
     d = dt.astimezone(timezone.utc)
     return f"{d.day} {_SHORT_MONTHS[d.month - 1]} {d.year}"
 
+
+def _app_icon() -> QIcon:
+    if _ICON_PATH.exists():
+        return QIcon(str(_ICON_PATH))
+    return QIcon()
+
+
+# ------------------------------------------------------------------ #
+# Background fetch worker                                             #
+# ------------------------------------------------------------------ #
 
 class _FetchWorker(QThread):
     finished = pyqtSignal(list)
@@ -53,6 +67,10 @@ class _FetchWorker(QThread):
             logger.exception("Error fetching videos")
             self.error.emit(str(e))
 
+
+# ------------------------------------------------------------------ #
+# Video card widget                                                   #
+# ------------------------------------------------------------------ #
 
 class _VideoCard(QFrame):
     def __init__(self, video: Video, parent=None):
@@ -104,6 +122,10 @@ class _VideoCard(QFrame):
         QApplication.clipboard().setText(build_single_video_text(self._video))
 
 
+# ------------------------------------------------------------------ #
+# Main window                                                         #
+# ------------------------------------------------------------------ #
+
 class MainWindow(QMainWindow):
     def __init__(
         self,
@@ -119,10 +141,15 @@ class MainWindow(QMainWindow):
         self._current_period = "today"
         self._worker: _FetchWorker | None = None
         self._current_videos: list[Video] = []
+        self._tray: QSystemTrayIcon | None = None
+        self._bg_worker = None
+        self._quitting = False
 
         self.setWindowTitle("YouTube Notifier")
         self.setMinimumSize(700, 550)
         self._build_ui()
+        self._setup_tray()
+        self._start_background_worker()
         self._load_videos()
 
     # ------------------------------------------------------------------ #
@@ -203,6 +230,61 @@ class MainWindow(QMainWindow):
         layout.addWidget(settings_btn)
 
         return bar
+
+    # ------------------------------------------------------------------ #
+    # System tray                                                         #
+    # ------------------------------------------------------------------ #
+
+    def _setup_tray(self):
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            logger.warning("System tray not available.")
+            return
+
+        self._tray = QSystemTrayIcon(_app_icon(), self)
+        self._tray.setToolTip("YouTube Notifier")
+
+        menu = QMenu()
+        menu.addAction("Otwórz", self._show_window)
+        menu.addAction("↻ Odśwież", self._on_refresh)
+        menu.addSeparator()
+        menu.addAction("Wyjdź", self._quit_app)
+        self._tray.setContextMenu(menu)
+
+        self._tray.activated.connect(self._on_tray_activated)
+        self._tray.show()
+
+    def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason):
+        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+            self._show_window()
+
+    def _show_window(self):
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+    def _quit_app(self):
+        self._quitting = True
+        self._cleanup()
+        QApplication.instance().quit()
+
+    # ------------------------------------------------------------------ #
+    # Background worker                                                   #
+    # ------------------------------------------------------------------ #
+
+    def _start_background_worker(self):
+        if self._db.get_setting("notifications", "true") != "true":
+            return
+        from workers.background_worker import BackgroundWorker
+        from services.notification_service import NotificationService
+        self._notif_service = NotificationService()
+        self._bg_worker = BackgroundWorker(self._provider)
+        self._bg_worker.new_videos_found.connect(self._on_new_videos_found)
+        self._bg_worker.start()
+        logger.info("Background worker started.")
+
+    def _on_new_videos_found(self, count: int):
+        if hasattr(self, "_notif_service"):
+            self._notif_service.show_new_videos(count)
 
     # ------------------------------------------------------------------ #
     # Tab switching                                                       #
@@ -301,11 +383,28 @@ class MainWindow(QMainWindow):
         from services.auth_service import AuthService
         from ui.login_window import LoginWindow
         AuthService().logout()
-        self._db.close()
+        if self._tray:
+            self._tray.hide()
+        self._quitting = True
+        self._cleanup()
         self._login_window = LoginWindow()
         self._login_window.show()
         self.close()
 
-    def closeEvent(self, event):
+    # ------------------------------------------------------------------ #
+    # Lifecycle                                                           #
+    # ------------------------------------------------------------------ #
+
+    def _cleanup(self):
+        if self._bg_worker:
+            self._bg_worker.stop()
+            self._bg_worker = None
         self._db.close()
-        event.accept()
+
+    def closeEvent(self, event: QCloseEvent):
+        if self._tray and self._tray.isVisible() and not self._quitting:
+            event.ignore()
+            self.hide()
+        else:
+            self._cleanup()
+            event.accept()

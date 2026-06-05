@@ -9,6 +9,7 @@ def main():
     app.setApplicationName("YouTube Notifier")
     app.setApplicationVersion("0.1.0")
     app.setOrganizationName("skrzyluk")
+    app.setQuitOnLastWindowClosed(False)
 
     window = LoginWindow()
     window.show()

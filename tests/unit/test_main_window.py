@@ -36,9 +36,11 @@ def mock_db():
 @pytest.fixture
 def window(qtbot, mock_provider, mock_db):
     mock_creds = MagicMock()
-    with patch("ui.main_window._FetchWorker") as MockWorker:
+    with patch("ui.main_window._FetchWorker") as MockWorker, \
+         patch("ui.main_window.QSystemTrayIcon") as MockTray:
         instance = MockWorker.return_value
         instance.isRunning.return_value = False
+        MockTray.isSystemTrayAvailable.return_value = False
         w = MainWindow(mock_creds, db=mock_db, provider=mock_provider)
         qtbot.addWidget(w)
         yield w, mock_provider
