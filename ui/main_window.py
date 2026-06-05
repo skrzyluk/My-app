@@ -1,24 +1,311 @@
-from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel
-from PyQt6.QtCore import Qt
+from datetime import datetime, timezone
+
+from PyQt6.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
+    QLabel, QScrollArea, QFrame, QApplication, QMessageBox,
+)
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from google.oauth2.credentials import Credentials
+
+from database.db import Database
+from models.video import Video
+from services.video_provider import VideoProvider
+from utils.summary_builder import build_single_video_text, build_summary_text
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+_PERIODS = [
+    ("today", "Dzisiaj"),
+    ("week",  "Tydzień"),
+    ("month", "Miesiąc"),
+]
+
+_SHORT_MONTHS = [
+    "sty", "lut", "mar", "kwi", "maj", "cze",
+    "lip", "sie", "wrz", "paź", "lis", "gru",
+]
+
+
+def _fmt_date(dt: datetime) -> str:
+    d = dt.astimezone(timezone.utc)
+    return f"{d.day} {_SHORT_MONTHS[d.month - 1]} {d.year}"
+
+
+class _FetchWorker(QThread):
+    finished = pyqtSignal(list)
+    error = pyqtSignal(str)
+
+    def __init__(self, provider: VideoProvider, period: str, force: bool = False):
+        super().__init__()
+        self._provider = provider
+        self._period = period
+        self._force = force
+
+    def run(self):
+        try:
+            if self._force:
+                videos = self._provider.force_refresh(self._period)
+            else:
+                videos = self._provider.get_videos(self._period)
+            self.finished.emit(videos)
+        except Exception as e:
+            logger.exception("Error fetching videos")
+            self.error.emit(str(e))
+
+
+class _VideoCard(QFrame):
+    def __init__(self, video: Video, parent=None):
+        super().__init__(parent)
+        self._video = video
+        self.setFrameShape(QFrame.Shape.StyledPanel)
+        self.setLineWidth(1)
+        self._build()
+
+    def _build(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(4)
+
+        title_label = QLabel(self._video.title)
+        title_label.setWordWrap(True)
+        f = title_label.font()
+        f.setBold(True)
+        title_label.setFont(f)
+        layout.addWidget(title_label)
+
+        meta_row = QHBoxLayout()
+        meta_row.setContentsMargins(0, 0, 0, 0)
+        meta = QLabel(f"⏱ {self._video.duration}  •  📅 {_fmt_date(self._video.published_at)}")
+        meta.setStyleSheet("color: gray;")
+        meta_row.addWidget(meta)
+        meta_row.addStretch()
+        copy_btn = QPushButton("Kopiuj")
+        copy_btn.setFixedWidth(70)
+        copy_btn.clicked.connect(self._copy)
+        meta_row.addWidget(copy_btn)
+        layout.addLayout(meta_row)
+
+        if self._video.description:
+            desc_text = self._video.description[:150].rstrip()
+            if len(self._video.description) > 150:
+                desc_text += "…"
+            desc = QLabel(desc_text)
+            desc.setWordWrap(True)
+            desc.setStyleSheet("color: #555;")
+            layout.addWidget(desc)
+
+        link = QLabel(f'<a href="{self._video.url}">{self._video.url}</a>')
+        link.setOpenExternalLinks(True)
+        link.setTextFormat(Qt.TextFormat.RichText)
+        layout.addWidget(link)
+
+    def _copy(self):
+        QApplication.clipboard().setText(build_single_video_text(self._video))
 
 
 class MainWindow(QMainWindow):
-    """Main application window – fully implemented in Phase 6."""
-
-    def __init__(self, credentials: Credentials):
+    def __init__(
+        self,
+        credentials: Credentials,
+        *,
+        db: Database | None = None,
+        provider: VideoProvider | None = None,
+    ):
         super().__init__()
-        self.credentials = credentials
+        self._credentials = credentials
+        self._db = db or Database()
+        self._provider = provider or VideoProvider(self._db, credentials)
+        self._current_period = "today"
+        self._worker: _FetchWorker | None = None
+        self._current_videos: list[Video] = []
+
         self.setWindowTitle("YouTube Notifier")
-        self.setMinimumSize(700, 500)
+        self.setMinimumSize(700, 550)
         self._build_ui()
+        self._load_videos()
+
+    # ------------------------------------------------------------------ #
+    # UI construction                                                     #
+    # ------------------------------------------------------------------ #
 
     def _build_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
-        layout = QVBoxLayout(central)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        root = QVBoxLayout(central)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
-        label = QLabel("Zalogowano pomyślnie!\n\nGłówny ekran – Phase 6")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(label)
+        root.addWidget(self._make_tab_bar())
+
+        self._status_label = QLabel("")
+        self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._status_label.setFixedHeight(24)
+        self._status_label.setStyleSheet("color: gray; font-size: 12px;")
+        root.addWidget(self._status_label)
+
+        self._scroll = QScrollArea()
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._videos_container = QWidget()
+        self._videos_layout = QVBoxLayout(self._videos_container)
+        self._videos_layout.setContentsMargins(8, 4, 8, 4)
+        self._videos_layout.setSpacing(6)
+        self._videos_layout.addStretch()
+        self._scroll.setWidget(self._videos_container)
+        root.addWidget(self._scroll, stretch=1)
+
+        root.addWidget(self._make_action_bar())
+
+        self._set_active_tab("today")
+
+    def _make_tab_bar(self) -> QWidget:
+        bar = QWidget()
+        bar.setFixedHeight(44)
+        layout = QHBoxLayout(bar)
+        layout.setContentsMargins(8, 4, 8, 4)
+        layout.setSpacing(4)
+
+        self._tab_buttons: dict[str, QPushButton] = {}
+        for key, label in _PERIODS:
+            btn = QPushButton(label)
+            btn.setCheckable(True)
+            btn.setFixedHeight(32)
+            btn.clicked.connect(lambda _checked, p=key: self._on_tab(p))
+            self._tab_buttons[key] = btn
+            layout.addWidget(btn)
+        layout.addStretch()
+        return bar
+
+    def _make_action_bar(self) -> QWidget:
+        bar = QWidget()
+        bar.setFixedHeight(52)
+        layout = QHBoxLayout(bar)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
+
+        self._refresh_btn = QPushButton("↻ Odśwież")
+        self._refresh_btn.clicked.connect(self._on_refresh)
+        layout.addWidget(self._refresh_btn)
+
+        self._copy_all_btn = QPushButton("Skopiuj wszystko")
+        self._copy_all_btn.clicked.connect(self._on_copy_all)
+        layout.addWidget(self._copy_all_btn)
+
+        layout.addStretch()
+
+        history_btn = QPushButton("Historia")
+        history_btn.clicked.connect(self._on_history)
+        layout.addWidget(history_btn)
+
+        settings_btn = QPushButton("Ustawienia")
+        settings_btn.clicked.connect(self._on_settings)
+        layout.addWidget(settings_btn)
+
+        return bar
+
+    # ------------------------------------------------------------------ #
+    # Tab switching                                                       #
+    # ------------------------------------------------------------------ #
+
+    def _on_tab(self, period: str):
+        if period == self._current_period:
+            return
+        self._current_period = period
+        self._set_active_tab(period)
+        self._load_videos()
+
+    def _set_active_tab(self, period: str):
+        for key, btn in self._tab_buttons.items():
+            btn.setChecked(key == period)
+
+    # ------------------------------------------------------------------ #
+    # Video loading                                                       #
+    # ------------------------------------------------------------------ #
+
+    def _load_videos(self, force: bool = False):
+        if self._worker and self._worker.isRunning():
+            return
+        self._set_busy("Ładowanie…")
+        self._worker = _FetchWorker(self._provider, self._current_period, force=force)
+        self._worker.finished.connect(self._on_videos_loaded)
+        self._worker.error.connect(self._on_fetch_error)
+        self._worker.start()
+
+    def _on_videos_loaded(self, videos: list[Video]):
+        self._current_videos = videos
+        self._render_videos(videos)
+        count = len(videos)
+        if count == 0:
+            self._status_label.setText("Brak nowych filmów w tym okresie.")
+        else:
+            noun = "film" if count == 1 else ("filmy" if 2 <= count <= 4 else "filmów")
+            self._status_label.setText(f"{count} {noun}")
+        self._set_idle()
+
+    def _on_fetch_error(self, message: str):
+        self._set_idle()
+        self._status_label.setText("Błąd ładowania.")
+        QMessageBox.critical(self, "Błąd", message)
+
+    def _render_videos(self, videos: list[Video]):
+        while self._videos_layout.count() > 1:
+            item = self._videos_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        if not videos:
+            placeholder = QLabel("Brak filmów do wyświetlenia.")
+            placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            placeholder.setStyleSheet("color: gray; padding: 40px;")
+            self._videos_layout.insertWidget(0, placeholder)
+            return
+
+        for i, video in enumerate(videos):
+            self._videos_layout.insertWidget(i, _VideoCard(video))
+
+    def _set_busy(self, text: str):
+        self._status_label.setText(text)
+        self._refresh_btn.setEnabled(False)
+        self._copy_all_btn.setEnabled(False)
+
+    def _set_idle(self):
+        self._refresh_btn.setEnabled(True)
+        self._copy_all_btn.setEnabled(bool(self._current_videos))
+
+    # ------------------------------------------------------------------ #
+    # Button actions                                                      #
+    # ------------------------------------------------------------------ #
+
+    def _on_refresh(self):
+        self._load_videos(force=True)
+
+    def _on_copy_all(self):
+        if not self._current_videos:
+            return
+        QApplication.clipboard().setText(
+            build_summary_text(self._current_videos, self._current_period)
+        )
+
+    def _on_history(self):
+        from ui.history_dialog import HistoryDialog
+        HistoryDialog(self._db, self).exec()
+
+    def _on_settings(self):
+        from ui.settings_dialog import SettingsDialog
+        dlg = SettingsDialog(self._db, self)
+        if dlg.exec() and dlg.logout_requested:
+            self._handle_logout()
+
+    def _handle_logout(self):
+        from services.auth_service import AuthService
+        from ui.login_window import LoginWindow
+        AuthService().logout()
+        self._db.close()
+        self._login_window = LoginWindow()
+        self._login_window.show()
+        self.close()
+
+    def closeEvent(self, event):
+        self._db.close()
+        event.accept()
