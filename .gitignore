@@ -27,6 +27,7 @@ credentials.json
 *.spec.bak
 dist/
 build/
+resources/icon.ico
 
 # IDE
 .vscode/

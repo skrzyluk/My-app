@@ -1,26 +1,55 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller build config for YouTube Notifier
+"""PyInstaller spec for YouTube Notifier — one-file, no console window."""
+import os
+from pathlib import Path
 
 block_cipher = None
+
+# Bundle client_secrets.json from APPDATA if present.
+# It lands at _MEIPASS root, matching get_client_secrets_path() in utils/constants.py.
+_secrets_src = Path(os.environ.get("APPDATA", ".")) / "YouTubeNotifier" / "client_secrets.json"
+_datas = [
+    ("i18n", "i18n"),
+    ("resources", "resources"),
+]
+if _secrets_src.exists():
+    _datas.append((str(_secrets_src), "."))
 
 a = Analysis(
     ["main.py"],
     pathex=[],
     binaries=[],
-    datas=[
-        # client_secrets.json must exist in the project root before building
-        ("client_secrets.json", "."),
-        ("resources/icon.ico", "resources"),
-        ("i18n", "i18n"),
-    ],
+    datas=_datas,
     hiddenimports=[
+        # keyring Windows backend (not auto-detected by PyInstaller)
         "keyring.backends.Windows",
-        "win32timezone",
+        "keyring.backends.fail",
+        "keyring.core",
+        # Google auth / API client
+        "google.auth.transport.requests",
+        "google.oauth2.credentials",
+        "google_auth_oauthlib.flow",
+        "googleapiclient.discovery",
+        "googleapiclient._helpers",
+        # PyQt6 core modules
+        "PyQt6.QtCore",
+        "PyQt6.QtGui",
+        "PyQt6.QtWidgets",
+        "PyQt6.sip",
+        # Windows toast notifications
+        "winotify",
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        "pytest",
+        "pytest_qt",
+        "responses",
+        "coverage",
+        "tkinter",
+        "_tkinter",
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -29,27 +58,28 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
+_icon = "resources/icon.ico" if Path("resources/icon.ico").exists() else None
+
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
     [],
-    exclude_binaries=True,
     name="YouTubeNotifier",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,
-    icon="resources/icon.ico",
-)
-
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    strip=False,
-    upx=True,
     upx_exclude=[],
-    name="YouTubeNotifier",
+    runtime_tmpdir=None,
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon=_icon,
+    version="file_version_info.txt",
 )
