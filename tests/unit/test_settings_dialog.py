@@ -29,7 +29,8 @@ class TestSettingsLoad:
 
     def test_default_theme_system(self, dialog):
         dlg, _ = dialog
-        assert dlg._theme_combo.currentIndex() == 0
+        assert dlg._selected_theme == "system"
+        assert dlg._theme_buttons["system"].isChecked()
 
     def test_default_notifications_enabled(self, dialog):
         dlg, _ = dialog
@@ -45,7 +46,13 @@ class TestSettingsLoad:
         db.set_setting("theme", "dark")
         dlg = SettingsDialog(db)
         qtbot.addWidget(dlg)
-        assert dlg._theme_combo.currentIndex() == 2
+        assert dlg._selected_theme == "dark-crimson"
+
+    def test_loads_saved_named_theme(self, qtbot, db):
+        db.set_setting("theme", "dark-ocean")
+        dlg = SettingsDialog(db)
+        qtbot.addWidget(dlg)
+        assert dlg._selected_theme == "dark-ocean"
 
     def test_loads_notifications_off(self, qtbot, db):
         db.set_setting("notifications", "false")
@@ -69,15 +76,27 @@ class TestSettingsSave:
 
     def test_save_theme_light(self, dialog):
         dlg, db = dialog
-        dlg._theme_combo.setCurrentIndex(1)
+        dlg._select_theme("light-classic")
         dlg._on_save()
-        assert db.get_setting("theme") == "light"
+        assert db.get_setting("theme") == "light-classic"
 
     def test_save_theme_dark(self, dialog):
         dlg, db = dialog
-        dlg._theme_combo.setCurrentIndex(2)
+        dlg._select_theme("dark-crimson")
         dlg._on_save()
-        assert db.get_setting("theme") == "dark"
+        assert db.get_setting("theme") == "dark-crimson"
+
+    def test_save_font_size(self, dialog):
+        dlg, db = dialog
+        dlg._select_font("large")
+        dlg._on_save()
+        assert db.get_setting("font_size") == "large"
+
+    def test_save_white_text(self, dialog):
+        dlg, db = dialog
+        dlg._white_text_check.setChecked(True)
+        dlg._on_save()
+        assert db.get_setting("white_text") == "true"
 
     def test_save_notifications_off(self, dialog):
         dlg, db = dialog

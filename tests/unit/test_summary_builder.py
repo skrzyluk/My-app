@@ -67,7 +67,7 @@ class TestBuildSummaryText:
         assert "5" in text
 
     def test_date_formatted_in_polish(self):
-        v = _video(published_str="2026-06-02T00:00:00Z")
+        v = _video(published_str="2026-06-02T12:00:00Z")
         text = build_summary_text([v], "week")
         assert "czerwca" in text
 
@@ -107,10 +107,10 @@ class TestTruncate:
 
 class TestFormatDate:
     @pytest.mark.parametrize("iso,expected_month", [
-        ("2026-01-15T00:00:00+00:00", "stycznia"),
-        ("2026-03-01T00:00:00+00:00", "marca"),
-        ("2026-06-04T00:00:00+00:00", "czerwca"),
-        ("2026-12-31T00:00:00+00:00", "grudnia"),
+        ("2026-01-15T12:00:00+00:00", "stycznia"),
+        ("2026-03-01T12:00:00+00:00", "marca"),
+        ("2026-06-04T12:00:00+00:00", "czerwca"),
+        ("2026-12-31T12:00:00+00:00", "grudnia"),
     ])
     def test_polish_month_names(self, iso, expected_month):
         dt = datetime.fromisoformat(iso)

@@ -34,6 +34,12 @@ class AppSettings:
     def notifications_enabled(self) -> bool:
         return self.get("notifications", "true") == "true"
 
+    def white_text(self) -> bool:
+        return self.get("white_text", "false") == "true"
+
+    def font_size(self) -> str:
+        return self.get("font_size", "normal") or "normal"
+
     def set_language(self, lang: str) -> None:
         self.set("language", lang)
 
@@ -42,3 +48,32 @@ class AppSettings:
 
     def set_notifications_enabled(self, enabled: bool) -> None:
         self.set("notifications", "true" if enabled else "false")
+
+    def set_white_text(self, enabled: bool) -> None:
+        self.set("white_text", "true" if enabled else "false")
+
+    def set_font_size(self, size: str) -> None:
+        self.set("font_size", size)
+
+    # ------------------------------------------------------------------ #
+    # AI provider                                                         #
+    # ------------------------------------------------------------------ #
+
+    def ai_provider(self) -> str:
+        """Zwraca aktywnego dostawcę AI: 'gemini' lub 'ollama'."""
+        return self.get("ai_provider", "gemini") or "gemini"
+
+    def ollama_url(self) -> str:
+        return self.get("ollama_url", "http://localhost:11434") or "http://localhost:11434"
+
+    def ollama_model(self) -> str:
+        return self.get("ollama_model", "llama3.2") or "llama3.2"
+
+    def set_ai_provider(self, provider: str) -> None:
+        self.set("ai_provider", provider)
+
+    def set_ollama_url(self, url: str) -> None:
+        self.set("ollama_url", url)
+
+    def set_ollama_model(self, model: str) -> None:
+        self.set("ollama_model", model)

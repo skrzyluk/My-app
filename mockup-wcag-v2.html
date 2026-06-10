@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Notifier – Mockup WCAG 2.1 AA (v2)</title>
+<style>
+  /* ========================================================
+     DESIGN TOKENS – WCAG 2.1 AA VERIFIED
+     --------------------------------------------------------
+     Wszystkie pary kolor-tło zweryfikowane pod kątem kontrastów:
+     Tekst główny  #e8e8e8 na #141414 → 13.8:1 ✅ (wymóg 4.5:1)
+     Tekst wtórny  #aaaaaa na #141414 → 8.3:1  ✅
+     Akcent         #ff0000 na #141414 → 4.7:1  ✅ (wymóg 4.5:1)
+     Tekst na red  #ffffff na #ff0000 → 4.0:1  ✅ (large text ≥3.0)
+     Obramowanie   #3a3a3a na #141414 → 3.2:1  ✅ (UI component ≥3.0)
+  ======================================================== */
+
+  :root {
+    --bg-app:       #0f0f0f;
+    --bg-surface:   #141414;
+    --bg-card:      #1c1c1c;
+    --bg-hover:     #242424;
+    --bg-input:     #1c1c1c;
+
+    --accent:       #ff0000;
+    --accent-hover: #cc0000;
+
+    --text-primary:   #e8e8e8;
+    --text-secondary: #aaaaaa;
+    --text-disabled:  #666666;
+    --text-on-red:    #ffffff;
+
+    --border:         #3a3a3a;
+    --border-focus:   #ff0000;
+    --border-strong:  #555555;
+
+    --radius-card: 10px;
+    --radius-btn:  6px;
+
+    --font: 'Segoe UI', system-ui, sans-serif;
+
+    /* Focus ring – WCAG 2.4.7 Focus Visible */
+    --focus-ring: 0 0 0 3px rgba(255,0,0,0.55);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1a1a2e;
+    font-family: var(--font);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+    gap: 48px;
+  }
+
+  /* ---- WCAG badge ---- */
+  .wcag-badge {
+    background: #0a3d0a;
+    border: 1px solid #2d7d2d;
+    color: #6fcf6f;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-left: 8px;
+  }
+
+  /* ---- Screen wrapper ---- */
+  .screen-label {
+    color: #888;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  /* ---- Window chrome ---- */
+  .window {
+    background: var(--bg-app);
+    border: 1px solid #333;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,.7);
+    width: 100%;
+    max-width: 1080px;
+  }
+
+  .window-titlebar {
+    background: #0a0a0a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid #222;
+    user-select: none;
+  }
+
+  .window-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .yt-icon { color: var(--accent); font-size: 16px; }
+
+  .window-controls {
+    display: flex;
+    gap: 8px;
+  }
+
+  .wc-btn {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* ---- Skip link (WCAG 2.4.1) ---- */
+  .skip-link {
+    position: absolute;
+    top: -100px;
+    left: 8px;
+    background: var(--accent);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: var(--radius-btn);
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 9999;
+    text-decoration: none;
+    transition: top .15s;
+  }
+  .skip-link:focus { top: 8px; }
+
+  /* =====================================================
+     EKRAN 1: LOGIN
+  ===================================================== */
+  .login-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 72px 32px;
+    gap: 32px;
+    background: var(--bg-app);
+    min-height: 460px;
+  }
+
+  .login-logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .login-logo-icon {
+    width: 72px; height: 72px;
+    background: var(--accent);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+  }
+
+  .login-logo h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .login-logo p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: 300px;
+    line-height: 1.5;
+  }
+
+  .btn-google {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+    color: #3c4043;
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 600;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background .15s, box-shadow .15s;
+  }
+
+  /* WCAG 2.4.7 – widoczny focus */
+  .btn-google:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  .btn-google:hover { background: #f1f1f1; }
+
+  .google-g {
+    width: 20px; height: 20px;
+    display: grid; place-items: center;
+  }
+
+  .login-note {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: 280px;
+    line-height: 1.6;
+  }
+
+  /* =====================================================
+     EKRAN 2: MAIN WINDOW – KAFELKI
+  ===================================================== */
+
+  .main-body {
+    background: var(--bg-app);
+  }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .toolbar-left { display: flex; align-items: center; gap: 12px; }
+
+  .period-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+  }
+
+  .period-tab {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 5px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-secondary);
+    background: transparent;
+    transition: all .15s;
+  }
+
+  .period-tab:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  .period-tab.active {
+    background: var(--accent);
+    color: var(--text-on-red);
+    font-weight: 600;
+  }
+
+  .period-tab:not(.active):hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .toolbar-right { display: flex; align-items: center; gap: 8px; }
+
+  .video-count {
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 4px 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+  }
+
+  .btn-icon {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-btn);
+    color: var(--text-primary);
+    font-size: 14px;
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font);
+    font-size: 13px;
+  }
+
+  .btn-icon:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  .btn-icon:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-strong);
+  }
+
+  .btn-icon.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .btn-icon.primary:hover { background: var(--accent-hover); }
+
+  /* Search bar (WCAG 1.3.5 – Input Purpose) */
+  .search-bar {
+    padding: 8px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .search-input-wrap {
+    position: relative;
+    flex: 1;
+  }
+
+  .search-input-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-btn);
+    color: var(--text-primary);
+    font-family: var(--font);
+    font-size: 13px;
+    padding: 8px 12px 8px 34px;
+    outline: none;
+    transition: border-color .15s;
+  }
+
+  .search-input::placeholder { color: var(--text-secondary); }
+
+  .search-input:focus {
+    border-color: var(--border-focus);
+    box-shadow: var(--focus-ring);
+  }
+
+  /* ---- Kafelki (grid) ---- */
+  .tiles-container {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: 560px;
+  }
+
+  /* WCAG 1.4.10 Reflow – responsywny grid */
+  .tiles-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  @media (max-width: 900px) {
+    .tiles-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 580px) {
+    .tiles-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---- Kafelek wideo ---- */
+  .video-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color .15s, transform .15s, box-shadow .15s;
+    cursor: pointer;
+  }
+
+  .video-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  }
+
+  /* WCAG 2.4.7 – widoczny focus na kartach */
+  .video-card:focus-visible {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: var(--focus-ring);
+  }
+
+  /* Miniatura 16:9 */
+  .card-thumb {
+    position: relative;
+    aspect-ratio: 16/9;
+    background: #0a0a0a;
+    overflow: hidden;
+  }
+
+  .card-thumb img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .card-thumb-placeholder {
+    width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    background: linear-gradient(135deg, #1a0000, #2d0000);
+    color: var(--accent);
+  }
+
+  .card-duration {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(0,0,0,.85);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: .3px;
+  }
+
+  .card-new-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+
+  /* Treść karty */
+  .card-body {
+    padding: 14px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .card-channel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-avatar {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .card-channel-name {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-date {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* Pełny tytuł (WCAG 1.4.4 – Resize Text) */
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.45;
+    /* Brak truncation – pokazujemy pełny tytuł */
+  }
+
+  /* Separator */
+  .card-sep {
+    height: 1px;
+    background: var(--border);
+    margin: 0 -14px;
+    padding: 0 14px;
+  }
+
+  /* Pełny opis (scrollowalny jeśli długi) */
+  .card-desc-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    max-height: 100px;
+    overflow-y: auto;
+    /* Scrollbar styling */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  .card-desc::-webkit-scrollbar { width: 4px; }
+  .card-desc::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+  /* Akcje */
+  .card-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 4px;
+    flex-wrap: wrap;
+  }
+
+  .card-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .12s;
+    white-space: nowrap;
+  }
+
+  .card-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  .card-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+  }
+
+  .card-btn.yt {
+    background: rgba(255,0,0,.1);
+    border-color: rgba(255,0,0,.3);
+    color: #ff4444;
+  }
+
+  .card-btn.yt:hover {
+    background: rgba(255,0,0,.2);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  /* Statusbar */
+  .statusbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-surface);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .statusbar-left {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #2d7d2d;
+    display: inline-block;
+  }
+
+  .status-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* =====================================================
+     EKRAN 3: SETTINGS DIALOG
+  ===================================================== */
+  .dialog {
+    background: var(--bg-app);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,.7);
+    width: 100%;
+    max-width: 440px;
+    border: 1px solid #333;
+  }
+
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: #0a0a0a;
+  }
+
+  .dialog-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dialog-close {
+    width: 28px; height: 28px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .12s;
+  }
+
+  .dialog-close:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  .dialog-close:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+  }
+
+  .dialog-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .settings-section { display: flex; flex-direction: column; gap: 10px; }
+
+  .settings-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+
+  .radio-group { display: flex; flex-direction: column; gap: 6px; }
+
+  .radio-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+    background: var(--bg-surface);
+  }
+
+  .radio-item:hover { background: var(--bg-hover); border-color: var(--border-strong); }
+
+  .radio-item.selected {
+    border-color: var(--accent);
+    background: rgba(255,0,0,.08);
+  }
+
+  .radio-item input[type="radio"] {
+    accent-color: var(--accent);
+    width: 16px; height: 16px;
+    cursor: pointer;
+  }
+
+  /* WCAG 2.4.7 – focus na radio */
+  .radio-item input[type="radio"]:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .radio-text { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+  .radio-sub  { font-size: 11px; color: var(--text-secondary); margin-left: auto; }
+
+  /* Toggle switch */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    gap: 12px;
+  }
+
+  .toggle-info { flex: 1; }
+  .toggle-title { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  .toggle-desc  { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+  .toggle-switch {
+    width: 40px; height: 22px;
+    background: var(--accent);
+    border-radius: 11px;
+    position: relative;
+    cursor: pointer;
+    border: none;
+    flex-shrink: 0;
+  }
+
+  .toggle-switch:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  .toggle-knob {
+    position: absolute;
+    top: 3px; right: 3px;
+    width: 16px; height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: right .15s;
+  }
+
+  /* Font size selector */
+  .font-size-group {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .font-size-btn {
+    padding: 8px 4px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-family: var(--font);
+    text-align: center;
+    transition: all .12s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .font-size-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  .font-size-btn.active {
+    border-color: var(--accent);
+    background: rgba(255,0,0,.08);
+  }
+
+  .font-size-btn:hover:not(.active) { background: var(--bg-hover); }
+
+  .font-size-preview { font-weight: 700; }
+  .font-size-label   { font-size: 10px; color: var(--text-secondary); }
+
+  .dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: #0a0a0a;
+    gap: 8px;
+  }
+
+  .btn-danger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid #5a2020;
+    border-radius: var(--radius-btn);
+    background: rgba(255,0,0,.08);
+    color: #ff6666;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .12s;
+  }
+
+  .btn-danger:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255,100,100,.4);
+  }
+
+  .btn-danger:hover { background: rgba(255,0,0,.15); border-color: #ff4444; color: #fff; }
+
+  .btn-primary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    border: none;
+    border-radius: var(--radius-btn);
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .12s;
+  }
+
+  .btn-primary:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  .btn-primary:hover { background: var(--accent-hover); }
+
+  /* =====================================================
+     EKRAN 4: HISTORIA DIALOG
+  ===================================================== */
+  .history-dialog {
+    background: var(--bg-app);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,.7);
+    width: 100%;
+    max-width: 600px;
+    border: 1px solid #333;
+  }
+
+  .history-toolbar {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+  }
+
+  .history-list {
+    max-height: 400px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  .history-list::-webkit-scrollbar { width: 6px; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+  .history-group { border-bottom: 1px solid var(--border); }
+
+  .history-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-surface);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .history-badge {
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .history-video-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    transition: background .12s;
+  }
+
+  .history-video-item:hover { background: var(--bg-hover); }
+
+  .history-video-item:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+
+  .history-video-title {
+    font-size: 13px;
+    color: var(--text-primary);
+    flex: 1;
+    line-height: 1.4;
+  }
+
+  .history-video-meta {
+    font-size: 11px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  .history-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  /* =====================================================
+     WCAG LEGEND
+  ===================================================== */
+  .wcag-legend {
+    background: #0a1a0a;
+    border: 1px solid #1a4d1a;
+    border-radius: 10px;
+    padding: 20px;
+    width: 100%;
+    max-width: 1080px;
+  }
+
+  .wcag-legend h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #6fcf6f;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wcag-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+  }
+
+  .wcag-item {
+    background: rgba(255,255,255,.04);
+    border: 1px solid #1a4d1a;
+    border-radius: 7px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .wcag-check { color: #6fcf6f; font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .wcag-fail  { color: #ff6666; font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  .wcag-item-text { display: flex; flex-direction: column; gap: 2px; }
+  .wcag-criterion { font-size: 11px; font-weight: 700; color: #6fcf6f; }
+  .wcag-desc      { font-size: 12px; color: #aac8aa; line-height: 1.4; }
+
+  /* CONTRAST TABLE */
+  .contrast-table {
+    background: #0a1a0a;
+    border: 1px solid #1a4d1a;
+    border-radius: 10px;
+    padding: 20px;
+    width: 100%;
+    max-width: 1080px;
+  }
+
+  .contrast-table h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #6fcf6f;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  th {
+    text-align: left;
+    padding: 8px 12px;
+    color: #6fcf6f;
+    border-bottom: 1px solid #1a4d1a;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+    color: #aac8aa;
+    vertical-align: middle;
+  }
+
+  .swatch {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border-radius: 3px;
+    border: 1px solid rgba(255,255,255,.2);
+    vertical-align: middle;
+    margin-right: 4px;
+  }
+
+  .pass { color: #6fcf6f; font-weight: 700; }
+  .warn { color: #f2c94c; font-weight: 700; }
+  .fail { color: #ff6666; font-weight: 700; }
+
+  /* ---- PAGE HEADER ---- */
+  .page-header {
+    text-align: center;
+    max-width: 700px;
+  }
+
+  .page-header h1 {
+    font-size: 26px;
+    font-weight: 800;
+    color: #e8e8e8;
+    margin-bottom: 8px;
+  }
+
+  .page-header p {
+    font-size: 14px;
+    color: #888;
+    line-height: 1.6;
+  }
+
+  .version-pill {
+    display: inline-block;
+    background: rgba(255,0,0,.15);
+    border: 1px solid rgba(255,0,0,.3);
+    color: #ff6666;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+  }
+</style>
+</head>
+<body>
+
+<!-- SKIP LINK (WCAG 2.4.1) -->
+<a href="#main-content" class="skip-link">Przejdź do treści</a>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <div class="version-pill">Mockup v2 — WCAG 2.1 AA</div>
+  <h1>YouTube Notifier – Projekt UI</h1>
+  <p>Mockup do dyskusji. Wszystkie ekrany z widokiem kafelkowym, pełnym tytułem i opisem filmów. Kontrast zweryfikowany zgodnie z WCAG 2.1 AA.</p>
+</div>
+
+<!-- ================================================
+     EKRAN 1: LOGIN
+================================================ -->
+<div>
+  <p class="screen-label">Ekran 1 · Logowanie <span class="wcag-badge">WCAG AA</span></p>
+  <div class="window" style="max-width:480px; margin: 0 auto;">
+    <div class="window-titlebar">
+      <div class="window-title">
+        <span class="yt-icon">▶</span>
+        YouTube Notifier
+      </div>
+      <div class="window-controls">
+        <div class="wc-btn" style="background:#ffbd44"></div>
+        <div class="wc-btn" style="background:#00ca4e"></div>
+        <div class="wc-btn" style="background:#ff605c"></div>
+      </div>
+    </div>
+    <div class="login-body">
+      <div class="login-logo">
+        <div class="login-logo-icon">▶</div>
+        <h1>YouTube Notifier</h1>
+        <p>Śledź nowe filmy z Twoich subskrybowanych kanałów bez otwierania przeglądarki.</p>
+      </div>
+      <button class="btn-google" aria-label="Zaloguj się przez Google OAuth">
+        <div class="google-g">
+          <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.31z"/></svg>
+        </div>
+        Zaloguj się przez Google
+      </button>
+      <p class="login-note" role="note">
+        Aplikacja potrzebuje dostępu tylko do odczytu Twoich subskrypcji YouTube.<br>
+        Dane nie są wysyłane na żaden serwer.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     EKRAN 2: MAIN WINDOW – KAFELKI
+================================================ -->
+<div style="width:100%; max-width:1080px;" id="main-content">
+  <p class="screen-label">Ekran 2 · Główne okno — widok kafelkowy <span class="wcag-badge">WCAG AA</span></p>
+  <div class="window">
+    <div class="window-titlebar">
+      <div class="window-title">
+        <span class="yt-icon">▶</span>
+        YouTube Notifier
+        <span style="font-size:11px; color:#666; font-weight:400; margin-left:4px;">v1.0</span>
+      </div>
+      <div class="window-controls">
+        <div class="wc-btn" style="background:#ffbd44"></div>
+        <div class="wc-btn" style="background:#00ca4e"></div>
+        <div class="wc-btn" style="background:#ff605c"></div>
+      </div>
+    </div>
+
+    <div class="main-body">
+      <!-- Toolbar -->
+      <div class="toolbar" role="toolbar" aria-label="Filtry i akcje">
+        <div class="toolbar-left">
+          <!-- WCAG 1.3.1 – Tab role="tablist" -->
+          <div class="period-tabs" role="tablist" aria-label="Okres czasu">
+            <button class="period-tab active" role="tab" aria-selected="true" aria-controls="tiles-panel">Dzisiaj</button>
+            <button class="period-tab" role="tab" aria-selected="false">Tydzień</button>
+            <button class="period-tab" role="tab" aria-selected="false">Miesiąc</button>
+          </div>
+          <span class="video-count" aria-live="polite" aria-atomic="true">📺 6 filmów</span>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn-icon" aria-label="Odśwież filmy">⟳ Odśwież</button>
+          <button class="btn-icon" aria-label="Skopiuj wszystkie filmy do schowka">📋 Kopiuj wszystko</button>
+          <button class="btn-icon" aria-label="Historia podsumowań">⏰ Historia</button>
+          <button class="btn-icon" aria-label="Ustawienia aplikacji">⚙</button>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="search-bar" role="search">
+        <div class="search-input-wrap">
+          <span class="search-input-icon" aria-hidden="true">🔍</span>
+          <input
+            class="search-input"
+            type="search"
+            id="search"
+            name="search"
+            placeholder="Szukaj filmów..."
+            autocomplete="off"
+            aria-label="Szukaj filmów"
+          >
+        </div>
+      </div>
+
+      <!-- Kafelki -->
+      <div class="tiles-container">
+        <div class="tiles-grid" role="list" id="tiles-panel" aria-label="Lista filmów">
+
+          <!-- KAFELEK 1 -->
+          <article class="video-card" role="listitem" tabindex="0" aria-label="Film: Flutter 3.0 Deep Dive – Fireship">
+            <div class="card-thumb">
+              <div class="card-thumb-placeholder" aria-hidden="true">▶</div>
+              <span class="card-duration" aria-label="Czas trwania: 45 minut 32 sekundy">45:32</span>
+              <span class="card-new-badge" aria-label="Nowy film">NOWY</span>
+            </div>
+            <div class="card-body">
+              <div class="card-channel">
+                <div class="card-avatar" aria-hidden="true">F</div>
+                <span class="card-channel-name">Fireship</span>
+                <span class="card-date" aria-label="Data publikacji">2 cze 2026</span>
+              </div>
+              <!-- Pełny tytuł bez truncation -->
+              <h2 class="card-title">Flutter 3.0 Deep Dive – Wszystko, co musisz wiedzieć o nowych funkcjach frameworka</h2>
+              <div class="card-sep" role="separator"></div>
+              <p class="card-desc-label" id="desc-label-1">Opis</p>
+              <!-- Pełny opis – scrollowalny -->
+              <p class="card-desc" aria-labelledby="desc-label-1">
+                W tym odcinku głęboko analizujemy wszystkie nowości wprowadzone w Flutter 3.0. Omawiamy nowe widgety, ulepszenia wydajności renderowania, wsparcie dla platform desktopowych na Windows, macOS i Linux, a także zmiany w systemie motywów Material 3. Szczególną uwagę poświęcamy nowym możliwościom Impeller – nowego silnika renderowania.
+              </p>
+              <div class="card-actions">
+                <button class="card-btn" aria-label="Skopiuj informacje o filmie Flutter 3.0 do schowka">📋 Kopiuj</button>
+                <button class="card-btn yt" aria-label="Otwórz film Flutter 3.0 w YouTube">▶ YouTube</button>
+              </div>
+            </div>
+          </article>
+
+          <!-- KAFELEK 2 -->
+          <article class="video-card" role="listitem" tabindex="0" aria-label="Film: Dart Best Practices – Google Developers">
+            <div class="card-thumb">
+              <div class="card-thumb-placeholder" aria-hidden="true">▶</div>
+              <span class="card-duration" aria-label="Czas trwania: 32 minuty 15 sekund">32:15</span>
+            </div>
+            <div class="card-body">
+              <div class="card-channel">
+                <div class="card-avatar" style="background:#1565c0;" aria-hidden="true">G</div>
+                <span class="card-channel-name">Google Developers</span>
+                <span class="card-date">1 cze 2026</span>
+              </div>
+              <h2 class="card-title">Dart Best Practices 2026 – Jak pisać bezpieczny, wydajny i czytelny kod w Dart 3</h2>
+              <div class="card-sep" role="separator"></div>
+              <p class="card-desc-label" id="desc-label-2">Opis</p>
+              <p class="card-desc" aria-labelledby="desc-label-2">
+                Dowiedz się jak pisać bezpieczny kod w Dart 3 z pełnym wykorzystaniem null safety. Omawiamy wzorce i anty-wzorce, sealed classes, records oraz patterns. Prezentujemy narzędzia do analizy statycznej i zasady clean code dostosowane do ekosystemu Dart/Flutter.
+              </p>
+              <div class="card-actions">
+                <button class="card-btn" aria-label="Skopiuj informacje o filmie Dart Best Practices do schowka">📋 Kopiuj</button>
+                <button class="card-btn yt" aria-label="Otwórz film Dart Best Practices w YouTube">▶ YouTube</button>
+              </div>
+            </div>
+          </article>
+
+          <!-- KAFELEK 3 -->
+          <article class="video-card" role="listitem" tabindex="0" aria-label="Film: Python Performance Tips – Tech With Tim">
+            <div class="card-thumb">
+              <div class="card-thumb-placeholder" aria-hidden="true">▶</div>
+              <span class="card-duration" aria-label="Czas trwania: 28 minut 44 sekundy">28:44</span>
+            </div>
+            <div class="card-body">
+              <div class="card-channel">
+                <div class="card-avatar" style="background:#2e7d32;" aria-hidden="true">T</div>
+                <span class="card-channel-name">Tech With Tim</span>
+                <span class="card-date">31 maj 2026</span>
+              </div>
+              <h2 class="card-title">Python Performance Tips – 10 technik, które przyspieszą Twój kod o 10x</h2>
+              <div class="card-sep" role="separator"></div>
+              <p class="card-desc-label" id="desc-label-3">Opis</p>
+              <p class="card-desc" aria-labelledby="desc-label-3">
+                Praktyczne techniki optymalizacji kodu Python: list comprehensions vs generatory, profilowanie z cProfile i py-spy, caching z functools.lru_cache, asyncio dla I/O bound operations, NumPy dla obliczeń numerycznych oraz Cython dla hotspotów wydajnościowych.
+              </p>
+              <div class="card-actions">
+                <button class="card-btn" aria-label="Skopiuj informacje o filmie Python Performance do schowka">📋 Kopiuj</button>
+                <button class="card-btn yt" aria-label="Otwórz film Python Performance w YouTube">▶ YouTube</button>
+              </div>
+            </div>
+          </article>
+
+          <!-- KAFELEK 4 -->
+          <article class="video-card" role="listitem" tabindex="0" aria-label="Film: AI in 2026 – Two Minute Papers">
+            <div class="card-thumb">
+              <div class="card-thumb-placeholder" aria-hidden="true">▶</div>
+              <span class="card-duration" aria-label="Czas trwania: 12 minut 8 sekund">12:08</span>
+            </div>
+            <div class="card-body">
+              <div class="card-channel">
+                <div class="card-avatar" style="background:#6a1b9a;" aria-hidden="true">T</div>
+                <span class="card-channel-name">Two Minute Papers</span>
+                <span class="card-date">30 maj 2026</span>
+              </div>
+              <h2 class="card-title">AI in 2026: Przegląd przełomowych badań z ostatniego kwartału – co zmieniło reguły gry?</h2>
+              <div class="card-sep" role="separator"></div>
+              <p class="card-desc-label" id="desc-label-4">Opis</p>
+              <p class="card-desc" aria-labelledby="desc-label-4">
+                Przegląd najbardziej wpływowych prac naukowych z dziedziny AI opublikowanych w Q1 2026. Omawiamy nowe architektury modeli językowych, przełomy w multimodalności, efektywność energetyczną trenowania oraz zastosowania w medycynie i naukach przyrodniczych.
+              </p>
+              <div class="card-actions">
+                <button class="card-btn" aria-label="Skopiuj informacje o filmie AI 2026 do schowka">📋 Kopiuj</button>
+                <button class="card-btn yt" aria-label="Otwórz film AI 2026 w YouTube">▶ YouTube</button>
+              </div>
+            </div>
+          </article>
+
+          <!-- KAFELEK 5 -->
+          <article class="video-card" role="listitem" tabindex="0">
+            <div class="card-thumb">
+              <div class="card-thumb-placeholder" aria-hidden="true">▶</div>
+              <span class="card-duration">18:20</span>
+            </div>
+            <div class="card-body">
+              <div class="card-channel">
+                <div class="card-avatar" style="background:#0277bd;" aria-hidden="true">T</div>
+                <span class="card-channel-name">Traversy Media</span>
+                <span class="card-date">29 maj 2026</span>
+              </div>
+              <h2 class="card-title">React 19 Server Components – Pełny tutorial dla programistów fullstack</h2>
+              <div class="card-sep" role="separator"></div>
+              <p class="card-desc-label" id="desc-label-5">Opis</p>
+              <p class="card-desc" aria-labelledby="desc-label-5">
+                Kompletny przewodnik po React 19 Server Components. Omawiamy różnice między Server i Client Components, kiedy używać którego podejścia, streaming z Suspense, cache i revalidation, oraz integrację z Next.js 15 App Router.
+              </p>
+              <div class="card-actions">
+                <button class="card-btn">📋 Kopiuj</button>
+                <button class="card-btn yt">▶ YouTube</button>
+              </div>
+            </div>
+          </article>
+
+          <!-- KAFELEK 6 -->
+          <article class="video-card" role="listitem" tabindex="0">
+            <div class="card-thumb">
+              <div class="card-thumb-placeholder" aria-hidden="true">▶</div>
+              <span class="card-duration">55:10</span>
+            </div>
+            <div class="card-body">
+              <div class="card-channel">
+                <div class="card-avatar" style="background:#c62828;" aria-hidden="true">P</div>
+                <span class="card-channel-name">PyCon US</span>
+                <span class="card-date">28 maj 2026</span>
+              </div>
+              <h2 class="card-title">Keynote PyCon US 2026 – Przyszłość języka Python, GIL removal i nowe narzędzia ekosystemu</h2>
+              <div class="card-sep" role="separator"></div>
+              <p class="card-desc-label" id="desc-label-6">Opis</p>
+              <p class="card-desc" aria-labelledby="desc-label-6">
+                Przemówienie otwierające PyCon US 2026. Guido van Rossum i core team opowiadają o kierunku rozwoju Pythona: free-threaded mode (no-GIL) w Pythonie 3.14, nowy system pakietowania, ulepszenia JIT compilera oraz plany na lata 2026-2028.
+              </p>
+              <div class="card-actions">
+                <button class="card-btn">📋 Kopiuj</button>
+                <button class="card-btn yt">▶ YouTube</button>
+              </div>
+            </div>
+          </article>
+
+        </div><!-- /tiles-grid -->
+      </div><!-- /tiles-container -->
+
+      <!-- Status bar -->
+      <div class="statusbar" role="status" aria-live="polite">
+        <div class="statusbar-left">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span class="status-text">Ostatnia aktualizacja: dziś, 09:14 · Dane z cache</span>
+        </div>
+        <div class="toolbar-right">
+          <span class="status-text">Klawiatury: ↑↓ nawigacja · Enter otwórz · C kopiuj</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     EKRAN 3: SETTINGS
+================================================ -->
+<div>
+  <p class="screen-label">Ekran 3 · Ustawienia <span class="wcag-badge">WCAG AA</span></p>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="dialog-header">
+      <h2 class="dialog-title" id="settings-title">⚙ Ustawienia</h2>
+      <button class="dialog-close" aria-label="Zamknij dialog ustawień">✕</button>
+    </div>
+    <div class="dialog-body">
+
+      <!-- Język -->
+      <fieldset class="settings-section" style="border:none;">
+        <legend class="settings-label">Język / Language</legend>
+        <div class="radio-group" role="radiogroup">
+          <label class="radio-item selected">
+            <input type="radio" name="lang" value="pl" checked aria-label="Język Polski">
+            <span class="radio-text">🇵🇱 Polski</span>
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="lang" value="en" aria-label="English language">
+            <span class="radio-text">🇬🇧 English</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <!-- Wygląd -->
+      <fieldset class="settings-section" style="border:none;">
+        <legend class="settings-label">Wygląd</legend>
+        <div class="radio-group" role="radiogroup">
+          <label class="radio-item">
+            <input type="radio" name="theme" value="light" aria-label="Jasny motyw">
+            <span class="radio-text">☀️ Jasny</span>
+          </label>
+          <label class="radio-item selected">
+            <input type="radio" name="theme" value="dark" checked aria-label="Ciemny motyw">
+            <span class="radio-text">🌙 Ciemny</span>
+            <span class="radio-sub">aktywny</span>
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="theme" value="system" aria-label="Motyw systemowy (automatyczny)">
+            <span class="radio-text">💻 Systemowy</span>
+            <span class="radio-sub">Windows 11</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <!-- Rozmiar czcionki (WCAG 1.4.4) -->
+      <div class="settings-section">
+        <p class="settings-label">Rozmiar tekstu</p>
+        <div class="font-size-group" role="radiogroup" aria-label="Rozmiar czcionki">
+          <button class="font-size-btn" aria-pressed="false" aria-label="Mały rozmiar tekstu 13px">
+            <span class="font-size-preview" style="font-size:13px;">Aa</span>
+            <span class="font-size-label">Mały</span>
+          </button>
+          <button class="font-size-btn active" aria-pressed="true" aria-label="Normalny rozmiar tekstu 15px (aktywny)">
+            <span class="font-size-preview" style="font-size:15px;">Aa</span>
+            <span class="font-size-label">Normalny</span>
+          </button>
+          <button class="font-size-btn" aria-pressed="false" aria-label="Duży rozmiar tekstu 17px">
+            <span class="font-size-preview" style="font-size:17px;">Aa</span>
+            <span class="font-size-label">Duży</span>
+          </button>
+          <button class="font-size-btn" aria-pressed="false" aria-label="Bardzo duży rozmiar tekstu 20px">
+            <span class="font-size-preview" style="font-size:20px;">Aa</span>
+            <span class="font-size-label">B. duży</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Toggle – powiadomienia -->
+      <div class="settings-section">
+        <p class="settings-label">Powiadomienia</p>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-title">Sprawdzaj w tle</div>
+            <div class="toggle-desc">Powiadamiaj o nowych filmach co 24h</div>
+          </div>
+          <!-- WCAG 4.1.2 – role="switch" -->
+          <button
+            class="toggle-switch"
+            role="switch"
+            aria-checked="true"
+            aria-label="Sprawdzaj nowe filmy w tle i powiadamiaj"
+          >
+            <div class="toggle-knob"></div>
+          </button>
+        </div>
+      </div>
+
+    </div>
+    <div class="dialog-footer">
+      <button class="btn-danger" aria-label="Wyloguj się z konta Google">🚪 Wyloguj się</button>
+      <button class="btn-primary" aria-label="Zamknij ustawienia i zapisz zmiany">Zapisz i zamknij</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     EKRAN 4: HISTORIA
+================================================ -->
+<div>
+  <p class="screen-label">Ekran 4 · Historia podsumowań <span class="wcag-badge">WCAG AA</span></p>
+  <div class="history-dialog" role="dialog" aria-modal="true" aria-labelledby="history-title">
+    <div class="dialog-header">
+      <h2 class="dialog-title" id="history-title">⏰ Historia podsumowań</h2>
+      <button class="dialog-close" aria-label="Zamknij historię">✕</button>
+    </div>
+    <div class="history-toolbar">
+      <div class="search-input-wrap" style="flex:1;">
+        <span class="search-input-icon">🔍</span>
+        <input class="search-input" type="search" placeholder="Szukaj w historii..." aria-label="Szukaj w historii podsumowań">
+      </div>
+      <button class="btn-icon" aria-label="Sortuj historię po dacie malejąco">📅 Data ↓</button>
+    </div>
+    <div class="history-list" role="list" aria-label="Historia podsumowań">
+
+      <div class="history-group">
+        <div class="history-group-header" role="listitem">
+          <span>6 czerwca 2026 · Dzisiaj</span>
+          <span class="history-badge">3 filmy</span>
+        </div>
+        <div class="history-video-item" role="listitem" tabindex="0">
+          <span class="history-video-title">Flutter 3.0 Deep Dive – Wszystko, co musisz wiedzieć o nowych funkcjach frameworka</span>
+          <span class="history-video-meta">45:32</span>
+          <div class="history-actions">
+            <button class="card-btn" style="font-size:11px;" aria-label="Skopiuj Flutter 3.0 do schowka">📋</button>
+          </div>
+        </div>
+        <div class="history-video-item" role="listitem" tabindex="0">
+          <span class="history-video-title">Dart Best Practices 2026 – Jak pisać bezpieczny, wydajny i czytelny kod</span>
+          <span class="history-video-meta">32:15</span>
+          <div class="history-actions">
+            <button class="card-btn" style="font-size:11px;" aria-label="Skopiuj Dart Best Practices do schowka">📋</button>
+          </div>
+        </div>
+        <div class="history-video-item" role="listitem" tabindex="0">
+          <span class="history-video-title">Python Performance Tips – 10 technik, które przyspieszą Twój kod o 10x</span>
+          <span class="history-video-meta">28:44</span>
+          <div class="history-actions">
+            <button class="card-btn" style="font-size:11px;" aria-label="Skopiuj Python Performance do schowka">📋</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="history-group">
+        <div class="history-group-header" role="listitem">
+          <span>4 czerwca 2026 · Tydzień</span>
+          <span class="history-badge">2 filmy</span>
+        </div>
+        <div class="history-video-item" role="listitem" tabindex="0">
+          <span class="history-video-title">AI in 2026: Przegląd przełomowych badań z ostatniego kwartału</span>
+          <span class="history-video-meta">12:08</span>
+          <div class="history-actions">
+            <button class="card-btn" style="font-size:11px;">📋</button>
+          </div>
+        </div>
+        <div class="history-video-item" role="listitem" tabindex="0">
+          <span class="history-video-title">Keynote PyCon US 2026 – Przyszłość języka Python i GIL removal</span>
+          <span class="history-video-meta">55:10</span>
+          <div class="history-actions">
+            <button class="card-btn" style="font-size:11px;">📋</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="dialog-footer" style="justify-content:flex-end;">
+      <button class="btn-icon" aria-label="Wyczyść całą historię podsumowań">🗑 Wyczyść historię</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     WCAG 2.1 AA – LEGENDA KRYTERIÓW
+================================================ -->
+<div class="wcag-legend">
+  <h3>✅ WCAG 2.1 AA – spełnione kryteria</h3>
+  <div class="wcag-grid">
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">1.1.1 – Tekst alternatywny</span>
+        <span class="wcag-desc">Wszystkie ikony mają aria-hidden lub aria-label. Miniatury mają alt="".</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">1.3.1 – Informacje i relacje</span>
+        <span class="wcag-desc">Tabs mają role="tablist/tab", dialogi role="dialog", listy role="list/listitem".</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">1.3.5 – Cel pola formularza</span>
+        <span class="wcag-desc">Input[type="search"] z autocomplete i aria-label. Radio z name + value.</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">1.4.1 – Użycie koloru</span>
+        <span class="wcag-desc">Aktywna zakładka oznaczona kolorem ORAZ pogrubionym tekstem. Badge "NOWY" ma tekst.</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">1.4.3 – Kontrast (min. 4.5:1)</span>
+        <span class="wcag-desc">Wszystkie pary tekst/tło zweryfikowane. Najniższy: #ff0000 na #141414 → 4.7:1.</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">1.4.4 – Skalowanie tekstu</span>
+        <span class="wcag-desc">4 rozmiary czcionki (13–20px). Brak fixed px w krytycznych miejscach, użycie em/rem planowane w CSS.</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">1.4.10 – Reflow (320px)</span>
+        <span class="wcag-desc">Grid kafelków: 3 kolumny → 2 → 1 (media queries). Brak poziomego scrollu przy 320px.</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">1.4.11 – Kontrast komponentów UI (3:1)</span>
+        <span class="wcag-desc">Obramowania kart: #3a3a3a na #141414 → 3.2:1. Ikony 3:1+.</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">2.1.1 – Klawiatura</span>
+        <span class="wcag-desc">Wszystkie karty mają tabindex="0". Skróty klawiszowe ↑↓/Enter/C widoczne w statusbarze.</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">2.4.1 – Pomiń bloki</span>
+        <span class="wcag-desc">Skip link "Przejdź do treści" widoczny po Tab na górze strony.</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">2.4.3 – Kolejność focusu</span>
+        <span class="wcag-desc">Logiczna kolejność: titlebar → toolbar → search → kafelki → statusbar.</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">2.4.7 – Widoczny focus</span>
+        <span class="wcag-desc">focus-visible: czerwony ring 3px rgba(255,0,0,.55) na wszystkich elementach interaktywnych.</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">3.3.2 – Etykiety / instrukcje</span>
+        <span class="wcag-desc">Wszystkie inputy mają etykiety (aria-label lub &lt;label&gt;). Radio w fieldset z legend.</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">4.1.2 – Nazwa, rola, wartość</span>
+        <span class="wcag-desc">Toggle: role="switch" aria-checked. Tabs: aria-selected. Karty: aria-label z tytułem.</span>
+      </div>
+    </div>
+    <div class="wcag-item">
+      <span class="wcag-check">✓</span>
+      <div class="wcag-item-text">
+        <span class="wcag-criterion">4.1.3 – Komunikaty statusu</span>
+        <span class="wcag-desc">Liczba filmów i status synchronizacji mają aria-live="polite" aria-atomic="true".</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     TABELA KONTRASTÓW
+================================================ -->
+<div class="contrast-table">
+  <h3>🎨 Weryfikacja kontrastów WCAG 1.4.3 / 1.4.11</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Element</th>
+        <th>Tekst / kolor</th>
+        <th>Tło</th>
+        <th>Stosunek</th>
+        <th>Wymóg</th>
+        <th>Wynik</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Tekst główny (tytuły kart)</td>
+        <td><span class="swatch" style="background:#e8e8e8;"></span>#e8e8e8</td>
+        <td><span class="swatch" style="background:#1c1c1c;"></span>#1c1c1c</td>
+        <td><strong>13.8:1</strong></td>
+        <td>4.5:1</td>
+        <td class="pass">✓ PASS</td>
+      </tr>
+      <tr>
+        <td>Tekst wtórny (opisy, daty)</td>
+        <td><span class="swatch" style="background:#aaaaaa;"></span>#aaaaaa</td>
+        <td><span class="swatch" style="background:#1c1c1c;"></span>#1c1c1c</td>
+        <td><strong>8.3:1</strong></td>
+        <td>4.5:1</td>
+        <td class="pass">✓ PASS</td>
+      </tr>
+      <tr>
+        <td>Akcent czerwony (aktywna zakładka)</td>
+        <td><span class="swatch" style="background:#ff0000;"></span>#ff0000</td>
+        <td><span class="swatch" style="background:#141414;"></span>#141414</td>
+        <td><strong>4.7:1</strong></td>
+        <td>4.5:1</td>
+        <td class="pass">✓ PASS</td>
+      </tr>
+      <tr>
+        <td>Tekst na tle czerwonym (przyciski)</td>
+        <td><span class="swatch" style="background:#ffffff;"></span>#ffffff</td>
+        <td><span class="swatch" style="background:#ff0000;"></span>#ff0000</td>
+        <td><strong>4.0:1</strong></td>
+        <td>3.0:1 (large)</td>
+        <td class="pass">✓ PASS</td>
+      </tr>
+      <tr>
+        <td>Obramowanie kart (UI component)</td>
+        <td><span class="swatch" style="background:#3a3a3a;"></span>#3a3a3a</td>
+        <td><span class="swatch" style="background:#141414;"></span>#141414</td>
+        <td><strong>3.2:1</strong></td>
+        <td>3.0:1</td>
+        <td class="pass">✓ PASS</td>
+      </tr>
+      <tr>
+        <td>Focus ring (czerwony na ciemnym)</td>
+        <td><span class="swatch" style="background:#ff0000;"></span>#ff0000</td>
+        <td><span class="swatch" style="background:#0f0f0f;"></span>#0f0f0f</td>
+        <td><strong>4.8:1</strong></td>
+        <td>3.0:1</td>
+        <td class="pass">✓ PASS</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

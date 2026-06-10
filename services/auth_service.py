@@ -9,8 +9,6 @@ from utils.constants import (
     KEYRING_SERVICE,
     KEYRING_USER,
     SCOPES,
-    YOUTUBE_API_SERVICE,
-    YOUTUBE_API_VERSION,
 )
 from utils.logger import get_logger
 

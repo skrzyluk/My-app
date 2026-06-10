@@ -1,7 +1,11 @@
+import ssl
+import threading
 import time
 from datetime import datetime
 from typing import Generator
 
+import httplib2
+from google_auth_httplib2 import AuthorizedHttp
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.oauth2.credentials import Credentials
@@ -33,8 +37,13 @@ class QuotaExceededError(YouTubeAPIError):
 
 
 class YouTubeService:
-    def __init__(self, youtube_resource):
+    def __init__(self, youtube_resource, credentials: Credentials | None = None):
         self._yt = youtube_resource
+        self._credentials = credentials
+        # httplib2.Http is NOT thread-safe; sharing one socket across the
+        # background worker and the UI fetch thread corrupts the TLS stream
+        # (WRONG_VERSION_NUMBER / BAD_RECORD_MAC). Give each thread its own.
+        self._thread_local = threading.local()
 
     @classmethod
     def from_credentials(cls, credentials: Credentials) -> "YouTubeService":
@@ -44,7 +53,21 @@ class YouTubeService:
             credentials=credentials,
             cache_discovery=False,
         )
-        return cls(resource)
+        return cls(resource, credentials)
+
+    def _http(self):
+        """Return a per-thread authorized Http, or None when no credentials.
+
+        Tests construct the service with a mock resource and no credentials;
+        in that case we fall back to the request's default transport.
+        """
+        if self._credentials is None:
+            return None
+        http = getattr(self._thread_local, "http", None)
+        if http is None:
+            http = AuthorizedHttp(self._credentials, http=httplib2.Http())
+            self._thread_local.http = http
+        return http
 
     # ------------------------------------------------------------------ #
     # Public API                                                           #
@@ -67,8 +90,19 @@ class YouTubeService:
         playlist_map = self.get_upload_playlist_ids(channel_ids)
 
         video_ids: list[str] = []
-        for playlist_id in playlist_map.values():
-            ids = self.get_video_ids_since(playlist_id, cutoff)
+        for channel_id, playlist_id in playlist_map.items():
+            try:
+                ids = self.get_video_ids_since(playlist_id, cutoff)
+            except YouTubeAPIError as e:
+                # A single channel whose uploads playlist is missing/private
+                # (404 playlistNotFound) must not abort the whole sync.
+                if e.status_code == 404:
+                    logger.warning(
+                        "Skipping channel %s – uploads playlist %s not found.",
+                        channel_id, playlist_id,
+                    )
+                    continue
+                raise
             video_ids.extend(ids)
 
         if not video_ids:
@@ -185,7 +219,7 @@ class YouTubeService:
             if delay:
                 time.sleep(delay)
             try:
-                return request.execute()
+                return request.execute(http=self._http())
             except HttpError as e:
                 status = int(e.resp.status)
                 if status == 403:
@@ -198,6 +232,12 @@ class YouTubeService:
                 logger.warning(
                     "API error %s on attempt %d/%d, retrying…",
                     status, attempt + 1, len(RETRY_DELAYS) + 1,
+                )
+            except (ssl.SSLError, OSError) as e:
+                last_error = e
+                logger.warning(
+                    "Network error on attempt %d/%d, retrying… (%s)",
+                    attempt + 1, len(RETRY_DELAYS) + 1, e,
                 )
 
         raise YouTubeAPIError(str(last_error)) from last_error
@@ -225,6 +265,7 @@ def _parse_video_item(item: dict) -> Video | None:
             url=f"https://www.youtube.com/watch?v={video_id}",
             duration=parse_iso_duration(details.get("duration", "")),
             published_at=parse_youtube_datetime(snippet["publishedAt"]),
+            channel_title=snippet.get("channelTitle", ""),
         )
     except (KeyError, ValueError) as e:
         logger.warning("Failed to parse video item: %s", e)

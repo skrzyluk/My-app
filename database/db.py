@@ -11,6 +11,7 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 
 _DEFAULT_DB_PATH = APPDATA_DIR / "youtube_notifier.db"
+_LAST_FETCH_KEY = "_last_fetch_at"
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -20,6 +21,7 @@ CREATE TABLE IF NOT EXISTS videos (
     description  TEXT NOT NULL DEFAULT '',
     url          TEXT NOT NULL,
     duration     TEXT NOT NULL DEFAULT '',
+    channel_title TEXT NOT NULL DEFAULT '',
     published_at TEXT NOT NULL,
     fetched_at   TEXT NOT NULL,
     cached_until TEXT NOT NULL
@@ -72,8 +74,8 @@ class Database:
                 """
                 INSERT OR REPLACE INTO videos
                     (video_id, channel_id, title, description, url, duration,
-                     published_at, fetched_at, cached_until)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     channel_title, published_at, fetched_at, cached_until)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
@@ -83,6 +85,7 @@ class Database:
                         v.description,
                         v.url,
                         v.duration,
+                        v.channel_title,
                         v.published_at.isoformat(),
                         fetched_at,
                         cached_until,
@@ -101,12 +104,32 @@ class Database:
         return [_row_to_video(r) for r in rows]
 
     def is_cache_fresh(self) -> bool:
-        """Return True if there is at least one video whose cache hasn't expired."""
-        now = _utcnow().isoformat()
+        """Return True if the cache is still valid.
+
+        The cache counts as fresh when either there is at least one video whose
+        per-row TTL hasn't expired, or a successful fetch was recorded within
+        CACHE_TTL_HOURS. The latter covers the case where the last fetch
+        returned no new videos – without it every load would re-hit the API.
+        """
+        now = _utcnow()
         row = self._conn.execute(
-            "SELECT 1 FROM videos WHERE cached_until > ? LIMIT 1", (now,)
+            "SELECT 1 FROM videos WHERE cached_until > ? LIMIT 1", (now.isoformat(),)
         ).fetchone()
-        return row is not None
+        if row is not None:
+            return True
+
+        last_fetch = self.get_setting(_LAST_FETCH_KEY)
+        if not last_fetch:
+            return False
+        try:
+            fetched_at = parse_youtube_datetime(last_fetch)
+        except ValueError:
+            return False
+        return now < fetched_at + timedelta(hours=CACHE_TTL_HOURS)
+
+    def mark_fetched(self) -> None:
+        """Record the timestamp of a successful API fetch (cache validity marker)."""
+        self.set_setting(_LAST_FETCH_KEY, _utcnow().isoformat())
 
     def clear_expired_cache(self) -> None:
         now = _utcnow().isoformat()
@@ -193,6 +216,17 @@ class Database:
     def _apply_schema(self) -> None:
         with self._conn:
             self._conn.executescript(_SCHEMA)
+        self._migrate()
+
+    def _migrate(self) -> None:
+        """Apply lightweight, idempotent migrations to pre-existing databases."""
+        cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(videos)")}
+        if "channel_title" not in cols:
+            with self._conn:
+                self._conn.execute(
+                    "ALTER TABLE videos ADD COLUMN channel_title TEXT NOT NULL DEFAULT ''"
+                )
+            logger.info("Migrated videos table: added channel_title column.")
 
 
 # ------------------------------------------------------------------ #
@@ -212,6 +246,7 @@ def _row_to_video(row: sqlite3.Row) -> Video:
         url=row["url"],
         duration=row["duration"],
         published_at=parse_youtube_datetime(row["published_at"]),
+        channel_title=row["channel_title"] if "channel_title" in row.keys() else "",
     )
 
 

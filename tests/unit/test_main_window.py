@@ -192,7 +192,10 @@ class TestVideoCard:
         card = _VideoCard(v)
         qtbot.addWidget(card)
         from PyQt6.QtWidgets import QPushButton
-        copy_btn = next(b for b in card.findChildren(QPushButton) if b.text() == "Kopiuj")
+        copy_btn = next(
+            b for b in card.findChildren(QPushButton)
+            if b.objectName() == "card_copy_btn"
+        )
         copy_btn.click()
         assert "CopyMe" in QApplication.clipboard().text()
 
@@ -204,5 +207,5 @@ class TestFmtDate:
         assert "4 cze 2026" == result
 
     def test_january(self):
-        dt = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        dt = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         assert "sty" in _fmt_date(dt)

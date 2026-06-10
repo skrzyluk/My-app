@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Notifier – Finalny Mockup v4</title>
+<style>
+/* ═══════════════════════════════════════════════════
+   DESIGN TOKENS — przełączane przez JS
+═══════════════════════════════════════════════════ */
+:root {
+  /* Dark Crimson (domyślny) */
+  --bg-app:       #0f0f0f;
+  --bg-surface:   #141414;
+  --bg-card:      #1c1c1c;
+  --bg-hover:     #242424;
+  --bg-input:     #1c1c1c;
+  --bg-titlebar:  #0a0a0a;
+  --bg-statusbar: #141414;
+
+  --accent:        #ff0000;
+  --accent-hover:  #cc0000;
+  --accent-subtle: rgba(255,0,0,.1);
+  --accent-border: rgba(255,0,0,.3);
+
+  --text-primary:   #e8e8e8;
+  --text-secondary: #aaaaaa;
+  --text-muted:     #555555;
+  --text-on-accent: #ffffff;
+
+  --border:        #2a2a2a;
+  --border-strong: #444444;
+  --focus-ring:    0 0 0 3px rgba(255,0,0,.4);
+
+  --shadow:        0 8px 32px rgba(0,0,0,.5);
+  --shadow-card:   0 2px 12px rgba(0,0,0,.4);
+
+  --radius-card: 10px;
+  --radius-btn:   6px;
+  --radius-tab:   5px;
+
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* ── MOTYWY ───────────────────────────────────────── */
+[data-theme="dark-ocean"] {
+  --bg-app:       #060d1a;
+  --bg-surface:   #0d1a2e;
+  --bg-card:      #101e30;
+  --bg-hover:     #14263a;
+  --bg-input:     #0d1a2e;
+  --bg-titlebar:  #040a14;
+  --bg-statusbar: #0d1a2e;
+  --accent:        #0ea5e9;
+  --accent-hover:  #0284c7;
+  --accent-subtle: rgba(14,165,233,.1);
+  --accent-border: rgba(14,165,233,.3);
+  --text-primary:   #e0e8f0;
+  --text-secondary: #5a7a9a;
+  --text-muted:     #243a50;
+  --text-on-accent: #ffffff;
+  --border:        #0d2040;
+  --border-strong: #1a3a5a;
+  --focus-ring:    0 0 0 3px rgba(14,165,233,.4);
+}
+
+[data-theme="dark-forest"] {
+  --bg-app:       #071210;
+  --bg-surface:   #0d1f1a;
+  --bg-card:      #101e18;
+  --bg-hover:     #162818;
+  --bg-input:     #0d1f1a;
+  --bg-titlebar:  #040e0c;
+  --bg-statusbar: #0d1f1a;
+  --accent:        #22c55e;
+  --accent-hover:  #16a34a;
+  --accent-subtle: rgba(34,197,94,.1);
+  --accent-border: rgba(34,197,94,.3);
+  --text-primary:   #e0f0e8;
+  --text-secondary: #3a6a4a;
+  --text-muted:     #1a3a26;
+  --text-on-accent: #ffffff;
+  --border:        #0d2e1a;
+  --border-strong: #1a4a28;
+  --focus-ring:    0 0 0 3px rgba(34,197,94,.4);
+}
+
+[data-theme="dark-violet"] {
+  --bg-app:       #0d0a1a;
+  --bg-surface:   #14102a;
+  --bg-card:      #181428;
+  --bg-hover:     #201a32;
+  --bg-input:     #14102a;
+  --bg-titlebar:  #080612;
+  --bg-statusbar: #14102a;
+  --accent:        #a855f7;
+  --accent-hover:  #9333ea;
+  --accent-subtle: rgba(168,85,247,.1);
+  --accent-border: rgba(168,85,247,.3);
+  --text-primary:   #ece0ff;
+  --text-secondary: #6a4a9a;
+  --text-muted:     #2a1a4a;
+  --text-on-accent: #ffffff;
+  --border:        #1e1040;
+  --border-strong: #301860;
+  --focus-ring:    0 0 0 3px rgba(168,85,247,.4);
+}
+
+[data-theme="dark-amber"] {
+  --bg-app:       #0f0c06;
+  --bg-surface:   #1c160c;
+  --bg-card:      #201a10;
+  --bg-hover:     #2a2214;
+  --bg-input:     #1c160c;
+  --bg-titlebar:  #0a0804;
+  --bg-statusbar: #1c160c;
+  --accent:        #f59e0b;
+  --accent-hover:  #d97706;
+  --accent-subtle: rgba(245,158,11,.1);
+  --accent-border: rgba(245,158,11,.3);
+  --text-primary:   #f0e8d0;
+  --text-secondary: #8a6a2a;
+  --text-muted:     #3a2a0a;
+  --text-on-accent: #000000;
+  --border:        #2a1e06;
+  --border-strong: #4a3a12;
+  --focus-ring:    0 0 0 3px rgba(245,158,11,.4);
+}
+
+[data-theme="light-classic"] {
+  --bg-app:       #f5f5f5;
+  --bg-surface:   #ebebeb;
+  --bg-card:      #ffffff;
+  --bg-hover:     #f9f9f9;
+  --bg-input:     #ffffff;
+  --bg-titlebar:  #e0e0e0;
+  --bg-statusbar: #ebebeb;
+  --accent:        #cc0000;
+  --accent-hover:  #aa0000;
+  --accent-subtle: rgba(204,0,0,.08);
+  --accent-border: rgba(204,0,0,.25);
+  --text-primary:   #111111;
+  --text-secondary: #555555;
+  --text-muted:     #aaaaaa;
+  --text-on-accent: #ffffff;
+  --border:        #dddddd;
+  --border-strong: #bbbbbb;
+  --focus-ring:    0 0 0 3px rgba(204,0,0,.3);
+  --shadow-card:   0 1px 6px rgba(0,0,0,.1);
+}
+
+[data-theme="high-contrast"] {
+  --bg-app:       #000000;
+  --bg-surface:   #000000;
+  --bg-card:      #000000;
+  --bg-hover:     #0a0a0a;
+  --bg-input:     #000000;
+  --bg-titlebar:  #000000;
+  --bg-statusbar: #000000;
+  --accent:        #ffff00;
+  --accent-hover:  #e6e600;
+  --accent-subtle: rgba(255,255,0,.08);
+  --accent-border: #ffff00;
+  --text-primary:   #ffffff;
+  --text-secondary: #ffffff;
+  --text-muted:     #aaaaaa;
+  --text-on-accent: #000000;
+  --border:        #ffffff;
+  --border-strong: #ffffff;
+  --focus-ring:    0 0 0 3px #ffff00;
+}
+
+/* ── PRZEŁĄCZNIK BIAŁYCH CZCIONEK ─────────────────── */
+[data-white-text="true"] {
+  --text-primary:   #ffffff !important;
+  --text-secondary: #ffffff !important;
+  --text-muted:     #cccccc !important;
+}
+
+/* ═══════════════════════════════════════════════════
+   RESET / BAZA
+═══════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #111827;
+  font-family: var(--font);
+  padding: 32px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+  color: #e5e7eb;
+}
+
+/* ═══════════════════════════════════════════════════
+   PAGE HEADER
+═══════════════════════════════════════════════════ */
+.page-header {
+  text-align: center;
+  max-width: 720px;
+}
+.page-header h1 { font-size: 26px; font-weight: 800; color: #f9fafb; margin-bottom: 8px; }
+.page-header p  { font-size: 14px; color: #6b7280; line-height: 1.6; }
+.pill {
+  display: inline-block;
+  background: rgba(99,102,241,.2); border: 1px solid rgba(99,102,241,.4);
+  color: #a5b4fc; font-size: 11px; font-weight: 700; padding: 3px 12px;
+  border-radius: 20px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: .8px;
+}
+
+/* ═══════════════════════════════════════════════════
+   THEME PICKER BAR
+═══════════════════════════════════════════════════ */
+.theme-picker {
+  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+  align-items: center;
+  background: #1f2937; border: 1px solid #374151; border-radius: 12px;
+  padding: 12px 16px; width: 100%; max-width: 1080px;
+}
+.theme-picker-label {
+  font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase;
+  letter-spacing: .8px; margin-right: 4px; white-space: nowrap;
+}
+.theme-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: 8px; border: 2px solid #374151;
+  background: #111827; cursor: pointer; font-family: var(--font);
+  font-size: 12px; font-weight: 600; color: #9ca3af;
+  transition: all .15s;
+}
+.theme-btn:hover { border-color: #6b7280; color: #e5e7eb; }
+.theme-btn.active { border-color: #a5b4fc; color: #e5e7eb; background: rgba(99,102,241,.12); }
+.theme-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+.divider { width: 1px; height: 32px; background: #374151; margin: 0 4px; }
+
+.white-text-toggle {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; border-radius: 8px; border: 2px solid #374151;
+  background: #111827; cursor: pointer; font-family: var(--font);
+  font-size: 12px; font-weight: 600; color: #9ca3af;
+  transition: all .15s; user-select: none;
+}
+.white-text-toggle:hover { border-color: #6b7280; color: #e5e7eb; }
+.white-text-toggle.active { border-color: #f9fafb; color: #f9fafb; background: rgba(249,250,251,.08); }
+
+.toggle-pill {
+  width: 36px; height: 20px; background: #374151; border-radius: 10px;
+  position: relative; transition: background .2s;
+}
+.toggle-pill.on { background: #f9fafb; }
+.toggle-knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #6b7280; transition: all .2s;
+}
+.toggle-pill.on .toggle-knob { left: 19px; background: #111827; }
+
+/* ═══════════════════════════════════════════════════
+   GŁÓWNE OKNO (split: lista + AI panel)
+═══════════════════════════════════════════════════ */
+.app-window {
+  width: 100%; max-width: 1080px;
+  border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 80px rgba(0,0,0,.7);
+  display: flex; flex-direction: column;
+  background: var(--bg-app);
+  transition: background .25s, border-color .25s;
+}
+
+/* ── Titlebar ─────────────────────────────────────── */
+.titlebar {
+  background: var(--bg-titlebar);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px;
+  transition: background .25s, border-color .25s;
+}
+.tb-left {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600;
+  color: var(--text-primary);
+}
+.tb-right { display: flex; gap: 8px; align-items: center; }
+.wc { width: 12px; height: 12px; border-radius: 50%; }
+
+/* ── Toolbar ──────────────────────────────────────── */
+.toolbar {
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; flex-wrap: wrap; gap: 8px;
+  transition: background .25s, border-color .25s;
+}
+.toolbar-left  { display: flex; gap: 8px; align-items: center; }
+.toolbar-right { display: flex; gap: 6px; align-items: center; }
+
+.period-tabs {
+  display: flex; gap: 3px;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 3px;
+  transition: background .25s, border-color .25s;
+}
+.ptab {
+  padding: 5px 14px; border: none; border-radius: var(--radius-tab);
+  font-family: var(--font); font-size: 12px; font-weight: 500;
+  cursor: pointer; color: var(--text-secondary); background: transparent;
+  transition: all .15s;
+}
+.ptab.active {
+  background: var(--accent); color: var(--text-on-accent); font-weight: 700;
+}
+.ptab:not(.active):hover { background: var(--bg-hover); color: var(--text-primary); }
+.ptab:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.video-count {
+  font-size: 11px; color: var(--text-secondary);
+  background: var(--bg-surface); border: 1px solid var(--border);
+  padding: 4px 10px; border-radius: 5px;
+  transition: all .25s;
+}
+
+.tbtn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 11px; border: 1px solid var(--border);
+  border-radius: var(--radius-btn); background: var(--bg-surface);
+  color: var(--text-secondary); font-family: var(--font); font-size: 11px;
+  font-weight: 500; cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.tbtn:hover { background: var(--bg-hover); border-color: var(--border-strong); color: var(--text-primary); }
+.tbtn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.tbtn.ai-btn {
+  background: rgba(99,102,241,.1); border-color: rgba(99,102,241,.3); color: #a5b4fc;
+}
+.tbtn.ai-btn:hover { background: rgba(99,102,241,.2); }
+.tbtn.ai-btn.active { background: rgba(99,102,241,.25); border-color: #6366f1; }
+
+/* ── Search ───────────────────────────────────────── */
+.search-wrap {
+  background: var(--bg-app); border-bottom: 1px solid var(--border);
+  padding: 7px 16px; display: flex; gap: 8px;
+  transition: background .25s, border-color .25s;
+}
+.search-inner { position: relative; flex: 1; }
+.search-icon {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); font-size: 13px; pointer-events: none;
+}
+.search-input {
+  width: 100%; background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: var(--radius-btn); color: var(--text-primary);
+  font-family: var(--font); font-size: 12px;
+  padding: 7px 12px 7px 32px; outline: none; transition: all .15s;
+}
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus { border-color: var(--accent); box-shadow: var(--focus-ring); }
+
+/* ── Body (split layout) ──────────────────────────── */
+.window-body { display: flex; flex: 1; min-height: 0; }
+
+/* ── Tiles panel ──────────────────────────────────── */
+.tiles-panel {
+  flex: 1; min-width: 0;
+  border-right: 1px solid var(--border);
+  transition: border-color .25s;
+}
+.tiles-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; padding: 14px;
+  background: var(--bg-app); transition: background .25s;
+}
+
+/* ═══════════════════════════════════════════════════
+   KAFELEK WIDEO — SPÓJNY LAYOUT PRZYCISKÓW
+═══════════════════════════════════════════════════ */
+.video-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-card); overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: border-color .15s, transform .15s, box-shadow .15s, background .25s;
+  cursor: pointer;
+}
+.video-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+.video-card:focus-visible {
+  outline: none; border-color: var(--accent); box-shadow: var(--focus-ring);
+}
+
+/* Miniatura */
+.card-thumb {
+  position: relative; aspect-ratio: 16/9; overflow: hidden;
+  background: var(--bg-surface); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .25s;
+}
+.thumb-placeholder {
+  font-size: 28px; color: var(--accent); opacity: .7;
+  transition: color .25s;
+}
+.card-dur {
+  position: absolute; bottom: 7px; right: 7px;
+  background: rgba(0,0,0,.85); color: #fff;
+  font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 3px;
+  letter-spacing: .3px;
+}
+.card-new {
+  position: absolute; top: 7px; left: 7px;
+  background: var(--accent); color: var(--text-on-accent);
+  font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 3px;
+  text-transform: uppercase; letter-spacing: .5px;
+  transition: background .25s, color .25s;
+}
+
+/* Body — flex column, przyciski zawsze na dole */
+.card-body {
+  padding: 11px 11px 11px;
+  display: flex; flex-direction: column; gap: 8px;
+  flex: 1; /* karta rozciąga się */
+}
+
+.card-channel {
+  display: flex; align-items: center; gap: 7px;
+}
+.card-avatar {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: #fff;
+}
+.card-channel-name {
+  font-size: 11px; color: var(--text-secondary); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
+  transition: color .25s;
+}
+.card-date {
+  font-size: 10px; color: var(--text-muted); flex-shrink: 0;
+  transition: color .25s;
+}
+
+.card-title {
+  font-size: 12px; font-weight: 700; color: var(--text-primary);
+  line-height: 1.45; transition: color .25s;
+}
+
+.card-sep {
+  height: 1px; background: var(--border);
+  margin: 0 -11px; /* rozciągnięty na pełną szerokość */
+  transition: background .25s;
+}
+
+.card-desc-label {
+  font-size: 9px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .6px; transition: color .25s;
+}
+
+/* Opis z "Pokaż więcej / Pokaż mniej" */
+.card-desc-wrap { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+
+.card-desc {
+  font-size: 11px; color: var(--text-secondary); line-height: 1.6;
+  transition: color .25s;
+  /* domyślnie skrócony do 3 linii */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card-desc.expanded {
+  display: block;
+  overflow: visible;
+}
+.toggle-desc-btn {
+  font-size: 10px; color: var(--accent); background: none; border: none;
+  padding: 0; cursor: pointer; font-family: var(--font); font-weight: 600;
+  text-align: left; transition: opacity .12s;
+  align-self: flex-start;
+}
+.toggle-desc-btn:hover { opacity: .75; }
+.toggle-desc-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 2px; }
+
+/* PRZYCISKI — identyczny układ na każdej karcie */
+.card-actions {
+  /* Zawsze u dołu body, zawsze ta sama struktura */
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* dwie równe kolumny */
+  gap: 6px;
+  margin-top: auto; /* przesuwa do dołu */
+  padding-top: 2px;
+}
+.card-btn {
+  /* jednakowa wysokość i wygląd na każdej karcie */
+  height: 30px;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  border: 1px solid var(--border); border-radius: 5px;
+  background: var(--bg-surface); color: var(--text-secondary);
+  font-family: var(--font); font-size: 10px; font-weight: 600;
+  cursor: pointer; transition: all .12s; white-space: nowrap;
+}
+.card-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.card-btn:hover { background: var(--bg-hover); border-color: var(--border-strong); color: var(--text-primary); }
+.card-btn.yt-btn {
+  background: var(--accent-subtle); border-color: var(--accent-border); color: var(--accent);
+}
+.card-btn.yt-btn:hover { background: var(--accent); color: var(--text-on-accent); border-color: var(--accent); }
+
+/* ── Status bar ───────────────────────────────────── */
+.statusbar {
+  background: var(--bg-statusbar); border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 16px; font-size: 11px; color: var(--text-muted);
+  transition: all .25s;
+}
+.status-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: #22c55e; margin-right: 5px;
+}
+
+/* ═══════════════════════════════════════════════════
+   AI SIDE PANEL
+═══════════════════════════════════════════════════ */
+.ai-panel {
+  width: 300px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  background: #080810;
+  transition: width .25s;
+}
+.ai-panel.hidden { width: 0; overflow: hidden; }
+
+.ai-header {
+  padding: 10px 12px; border-bottom: 1px solid #1a1a2e;
+  display: flex; align-items: center; gap: 8px; background: #06060e;
+}
+.ai-icon-pill {
+  width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+  background: linear-gradient(135deg,#6366f1,#8b5cf6);
+  display: flex; align-items: center; justify-content: center; font-size: 13px;
+}
+.ai-header-text { flex: 1; }
+.ai-title    { font-size: 12px; font-weight: 700; color: #e5e7eb; }
+.ai-subtitle { font-size: 9px; color: #4b5563; }
+.ai-live     { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #34d399; }
+.ai-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399;
+               box-shadow: 0 0 5px #34d399; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.ai-quick {
+  padding: 8px 10px; border-bottom: 1px solid #1a1a2e;
+  display: flex; gap: 4px; flex-wrap: wrap;
+}
+.ai-chip {
+  padding: 3px 8px; border-radius: 12px; border: 1px solid #1e1e30;
+  background: #12121e; color: #6b7280; font-size: 10px; font-weight: 500;
+  cursor: pointer; transition: all .12s; font-family: var(--font);
+}
+.ai-chip:hover { border-color: #6366f1; color: #a5b4fc; background: rgba(99,102,241,.1); }
+
+.ai-messages {
+  flex: 1; overflow-y: auto; padding: 10px;
+  display: flex; flex-direction: column; gap: 10px;
+  scrollbar-width: thin; scrollbar-color: #1e1e30 transparent;
+}
+.ai-messages::-webkit-scrollbar { width: 4px; }
+.ai-messages::-webkit-scrollbar-thumb { background: #1e1e30; border-radius: 2px; }
+
+.ai-msg { display: flex; gap: 7px; align-items: flex-start; }
+.ai-msg.user { flex-direction: row-reverse; }
+.ai-av {
+  width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 11px;
+}
+.ai-av.bot  { background: linear-gradient(135deg,#6366f1,#8b5cf6); }
+.ai-av.user { background: linear-gradient(135deg,#ff3333,#cc0000); font-weight:700;color:#fff;font-size:9px; }
+
+.ai-bubble {
+  max-width: 85%; padding: 8px 10px; font-size: 11px; line-height: 1.55;
+  border-radius: 10px;
+}
+.ai-bubble.bot  {
+  background: #12121e; border: 1px solid #1e1e30; color: #c9d1da;
+  border-top-left-radius: 2px;
+}
+.ai-bubble.user {
+  background: linear-gradient(135deg,#ff3333,#cc0000); color: #fff;
+  border-top-right-radius: 2px;
+}
+.ai-bubble strong { color: #a5b4fc; font-weight: 600; }
+.ai-bubble .res {
+  margin-top: 7px; background: #0a0a18; border: 1px solid #1e1e30;
+  border-radius: 6px; padding: 7px 8px; display: flex; gap: 7px; align-items: center;
+}
+.ai-bubble .res-thumb {
+  width: 40px; height: 26px; border-radius: 3px; flex-shrink: 0;
+  background: linear-gradient(135deg,#1a0000,#2d0000);
+  display: flex; align-items: center; justify-content: center; font-size: 12px; color: #ff4444;
+}
+.ai-bubble .res-title { font-size: 10px; font-weight: 600; color: #e5e7eb; line-height: 1.3; }
+.ai-bubble .res-meta  { font-size: 9px; color: #4b5563; margin-top: 1px; }
+
+.ai-typing { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
+.ai-typing span {
+  width: 5px; height: 5px; border-radius: 50%; background: #6366f1;
+  animation: bounce .9s infinite;
+}
+.ai-typing span:nth-child(2) { animation-delay: .15s; }
+.ai-typing span:nth-child(3) { animation-delay: .30s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-4px)} }
+
+.ai-input-row {
+  padding: 8px 10px; border-top: 1px solid #1a1a2e;
+  display: flex; gap: 6px; align-items: center;
+}
+.ai-input {
+  flex: 1; background: #12121e; border: 1px solid #1e1e30;
+  border-radius: 8px; color: #e5e7eb; font-family: var(--font); font-size: 11px;
+  padding: 7px 10px; outline: none; transition: border-color .15s;
+}
+.ai-input::placeholder { color: #374151; }
+.ai-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.25); }
+.ai-send {
+  width: 30px; height: 30px; border-radius: 7px; border: none; flex-shrink: 0;
+  background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff;
+  font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: opacity .12s;
+}
+.ai-send:hover { opacity: .85; }
+.ai-note {
+  padding: 4px 10px 8px; font-size: 9px; color: #1f2937; text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════
+   USTAWIENIA – BIAŁY TEKST TOGGLE (wizualizacja)
+═══════════════════════════════════════════════════ */
+.settings-preview {
+  width: 100%; max-width: 420px;
+  background: var(--bg-app); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 16px 60px rgba(0,0,0,.6);
+  transition: all .25s;
+}
+.settings-header {
+  background: var(--bg-titlebar); border-bottom: 1px solid var(--border);
+  padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;
+}
+.settings-title {
+  font-size: 14px; font-weight: 700; color: var(--text-primary);
+  display: flex; align-items: center; gap: 8px;
+  transition: color .25s;
+}
+.settings-close {
+  width: 26px; height: 26px; border: 1px solid var(--border); border-radius: 5px;
+  background: transparent; color: var(--text-secondary); font-size: 14px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.settings-close:hover { background: var(--bg-hover); }
+
+.settings-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 16px; }
+
+.settings-section { display: flex; flex-direction: column; gap: 8px; }
+.settings-label {
+  font-size: 10px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .7px; transition: color .25s;
+}
+
+/* radio rows */
+.radio-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: 7px; cursor: pointer; transition: all .15s;
+}
+.radio-row.selected { border-color: var(--accent); background: var(--accent-subtle); }
+.radio-row:hover:not(.selected) { background: var(--bg-hover); }
+.radio-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--border-strong); flex-shrink: 0; position: relative;
+  transition: border-color .15s;
+}
+.radio-row.selected .radio-dot { border-color: var(--accent); }
+.radio-row.selected .radio-dot::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+}
+.radio-text { font-size: 12px; font-weight: 500; color: var(--text-primary); flex:1; transition: color .25s; }
+.radio-sub  { font-size: 10px; color: var(--text-muted); transition: color .25s; }
+
+/* toggle rows */
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 10px; background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: 7px; gap: 12px; transition: all .25s;
+}
+.toggle-info { flex: 1; }
+.toggle-title { font-size: 12px; font-weight: 600; color: var(--text-primary); transition: color .25s; }
+.toggle-desc  { font-size: 10px; color: var(--text-secondary); margin-top: 2px; transition: color .25s; }
+
+.sw {
+  width: 38px; height: 22px; border-radius: 11px; border: none;
+  background: var(--border-strong); position: relative; cursor: pointer;
+  flex-shrink: 0; transition: background .2s;
+}
+.sw.on { background: var(--accent); }
+.sw-k {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4);
+  transition: left .2s;
+}
+.sw.on .sw-k { left: 19px; }
+/* WHITE TEXT toggle — zawsze białe czcionki */
+.sw.white-sw { background: #444; }
+.sw.white-sw.on { background: #f9fafb; }
+.sw.white-sw.on .sw-k { background: #111; }
+
+/* font size */
+.font-btns {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 5px;
+}
+.fbtn {
+  padding: 7px 4px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg-surface); cursor: pointer; font-family: var(--font);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  transition: all .12s;
+}
+.fbtn.active { border-color: var(--accent); background: var(--accent-subtle); }
+.fbtn:hover:not(.active) { background: var(--bg-hover); }
+.fbtn-preview { font-weight: 700; color: var(--text-primary); transition: color .25s; }
+.fbtn-label   { font-size: 9px; color: var(--text-secondary); transition: color .25s; }
+
+.settings-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 18px; border-top: 1px solid var(--border); background: var(--bg-titlebar);
+  transition: all .25s;
+}
+.btn-danger {
+  padding: 7px 14px; border: 1px solid rgba(239,68,68,.3);
+  border-radius: var(--radius-btn); background: rgba(239,68,68,.08);
+  color: #f87171; font-family: var(--font); font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all .12s; display: flex; align-items: center; gap: 5px;
+}
+.btn-danger:hover { background: rgba(239,68,68,.15); border-color: #f87171; color: #fff; }
+.btn-primary {
+  padding: 7px 18px; border: none; border-radius: var(--radius-btn);
+  background: var(--accent); color: var(--text-on-accent);
+  font-family: var(--font); font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: background .12s;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+
+/* ── Section labels ───────────────────────────────── */
+.sec-label {
+  width: 100%; max-width: 1080px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.5px; color: #4b5563;
+  padding-bottom: 10px; border-bottom: 1px solid #1f2937;
+  margin-bottom: -30px;
+}
+
+/* ── Desc długość ─ test rozdzielczości ───────────── */
+.short-desc { display: none; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════════ -->
+<div class="page-header">
+  <div class="pill">Mockup v4 — Finalny, Interaktywny</div>
+  <h1>YouTube Notifier – Design System</h1>
+  <p>Klikaj motywy i przełącznik białych czcionek — zmiany są widoczne na żywo.<br>
+     Karty mają identyczny układ przycisków · Opis z "Pokaż więcej / Pokaż mniej"</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     THEME PICKER
+══════════════════════════════════════════════════ -->
+<div class="theme-picker" role="toolbar" aria-label="Wybór motywu">
+  <span class="theme-picker-label">Motyw:</span>
+
+  <button class="theme-btn active" data-theme="dark-crimson" onclick="setTheme(this)" aria-pressed="true">
+    <span class="theme-dot" style="background:#ff0000;"></span>Dark Crimson
+  </button>
+  <button class="theme-btn" data-theme="dark-ocean" onclick="setTheme(this)">
+    <span class="theme-dot" style="background:#0ea5e9;"></span>Dark Ocean
+  </button>
+  <button class="theme-btn" data-theme="dark-forest" onclick="setTheme(this)">
+    <span class="theme-dot" style="background:#22c55e;"></span>Dark Forest
+  </button>
+  <button class="theme-btn" data-theme="dark-violet" onclick="setTheme(this)">
+    <span class="theme-dot" style="background:#a855f7;"></span>Dark Violet
+  </button>
+  <button class="theme-btn" data-theme="dark-amber" onclick="setTheme(this)">
+    <span class="theme-dot" style="background:#f59e0b;"></span>Dark Amber
+  </button>
+  <button class="theme-btn" data-theme="light-classic" onclick="setTheme(this)">
+    <span class="theme-dot" style="background:#cc0000;border:1px solid #ddd;"></span>Light Classic
+  </button>
+  <button class="theme-btn" data-theme="high-contrast" onclick="setTheme(this)">
+    <span class="theme-dot" style="background:#ffff00;border:1px solid #fff;"></span>High Contrast
+  </button>
+
+  <div class="divider" aria-hidden="true"></div>
+
+  <div class="white-text-toggle" id="wtToggle" onclick="toggleWhiteText()" role="switch" aria-checked="false" tabindex="0" aria-label="Wszystkie czcionki białe">
+    <div class="toggle-pill" id="wtPill">
+      <div class="toggle-knob"></div>
+    </div>
+    Białe czcionki
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     GŁÓWNE OKNO (z AI panelem)
+══════════════════════════════════════════════════ -->
+<p class="sec-label">Główne okno — widok kafelkowy + panel AI</p>
+
+<div class="app-window" id="appWindow">
+
+  <!-- Titlebar -->
+  <div class="titlebar">
+    <div class="tb-left">
+      <!-- Ikona A: dzwonek + play -->
+      <svg width="22" height="22" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+        <path d="M22 4C14 4 8 10 8 18v8l-3 3v2h30v-2l-3-3v-8C32 10 30 4 22 4z" fill="var(--accent)"/>
+        <path d="M19 36a3 3 0 006 0H19z" fill="var(--accent)"/>
+        <circle cx="31" cy="12" r="7" fill="var(--accent-hover,#cc0000)"/>
+        <polygon points="28.5,10 28.5,14 33.5,12" fill="white"/>
+      </svg>
+      YouTube Notifier
+      <span style="font-size:10px;color:var(--text-muted);font-weight:400;margin-left:4px;">v1.0</span>
+    </div>
+    <div class="tb-right">
+      <div class="wc" style="background:#ffbd44;"></div>
+      <div class="wc" style="background:#00ca4e;"></div>
+      <div class="wc" style="background:#ff605c;"></div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar" role="toolbar" aria-label="Filtry i akcje">
+    <div class="toolbar-left">
+      <div class="period-tabs" role="tablist" aria-label="Okres">
+        <button class="ptab active" role="tab" aria-selected="true">Dzisiaj</button>
+        <button class="ptab" role="tab" aria-selected="false">Tydzień</button>
+        <button class="ptab" role="tab" aria-selected="false">Miesiąc</button>
+      </div>
+      <span class="video-count" aria-live="polite">📺 6 filmów</span>
+    </div>
+    <div class="toolbar-right">
+      <button class="tbtn" aria-label="Odśwież">⟳ Odśwież</button>
+      <button class="tbtn" aria-label="Kopiuj wszystkie">📋 Kopiuj</button>
+      <button class="tbtn ai-btn active" id="aiToggleBtn" onclick="toggleAI()" aria-label="Pokaż/Ukryj panel AI" aria-pressed="true">
+        🤖 AI Chat
+      </button>
+      <button class="tbtn" aria-label="Historia">⏰</button>
+      <button class="tbtn" aria-label="Ustawienia">⚙</button>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="search-wrap" role="search">
+    <div class="search-inner">
+      <span class="search-icon" aria-hidden="true">🔍</span>
+      <input class="search-input" type="search" placeholder="Szukaj filmów..." aria-label="Szukaj filmów">
+    </div>
+  </div>
+
+  <!-- Body: tiles + AI -->
+  <div class="window-body">
+
+    <!-- Tiles panel -->
+    <div class="tiles-panel">
+      <div class="tiles-grid" role="list" aria-label="Lista filmów">
+
+        <!-- KARTA 1 -->
+        <article class="video-card" role="listitem" tabindex="0"
+                 aria-label="Flutter 3.0 Deep Dive – Fireship">
+          <div class="card-thumb" aria-hidden="true">
+            <span class="thumb-placeholder">▶</span>
+            <span class="card-dur">45:32</span>
+            <span class="card-new">NOWY</span>
+          </div>
+          <div class="card-body">
+            <div class="card-channel">
+              <div class="card-avatar" style="background:#ff0000;" aria-hidden="true">F</div>
+              <span class="card-channel-name">Fireship</span>
+              <span class="card-date">2 cze 2026</span>
+            </div>
+            <h2 class="card-title">Flutter 3.0 Deep Dive – Wszystko, co musisz wiedzieć o nowych funkcjach frameworka</h2>
+            <div class="card-sep" role="separator"></div>
+            <div class="card-desc-wrap">
+              <p class="card-desc-label" id="dl-1">Opis</p>
+              <p class="card-desc" id="desc-1" aria-labelledby="dl-1">
+                W tym odcinku głęboko analizujemy wszystkie nowości wprowadzone w Flutter 3.0. Omawiamy nowe widgety, ulepszenia wydajności renderowania, wsparcie dla platform desktopowych na Windows, macOS i Linux, a także zmiany w systemie motywów Material 3. Szczególną uwagę poświęcamy nowym możliwościom Impeller – nowego silnika renderowania, który zastępuje Skia. Sprawdzamy też zmiany w DevTools i nowe narzędzia do profilowania aplikacji.
+              </p>
+              <button class="toggle-desc-btn" onclick="toggleDesc('desc-1', this)" aria-expanded="false">
+                Pokaż więcej ▾
+              </button>
+            </div>
+            <!-- PRZYCISKI — identyczny grid 1fr 1fr na każdej karcie -->
+            <div class="card-actions">
+              <button class="card-btn" aria-label="Skopiuj Flutter 3.0 do schowka">📋 Kopiuj</button>
+              <button class="card-btn yt-btn" aria-label="Otwórz Flutter 3.0 w YouTube">▶ YouTube</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- KARTA 2 -->
+        <article class="video-card" role="listitem" tabindex="0"
+                 aria-label="Dart Best Practices – Google Developers">
+          <div class="card-thumb" aria-hidden="true">
+            <span class="thumb-placeholder">▶</span>
+            <span class="card-dur">32:15</span>
+          </div>
+          <div class="card-body">
+            <div class="card-channel">
+              <div class="card-avatar" style="background:#1565c0;" aria-hidden="true">G</div>
+              <span class="card-channel-name">Google Developers</span>
+              <span class="card-date">1 cze 2026</span>
+            </div>
+            <h2 class="card-title">Dart Best Practices 2026 – Jak pisać bezpieczny, wydajny i czytelny kod w Dart 3</h2>
+            <div class="card-sep" role="separator"></div>
+            <div class="card-desc-wrap">
+              <p class="card-desc-label" id="dl-2">Opis</p>
+              <p class="card-desc" id="desc-2" aria-labelledby="dl-2">
+                Dowiedz się jak pisać bezpieczny kod w Dart 3 z pełnym wykorzystaniem null safety. Omawiamy wzorce i anty-wzorce, sealed classes, records oraz patterns. Prezentujemy narzędzia do analizy statycznej i zasady clean code dostosowane do ekosystemu Dart/Flutter.
+              </p>
+              <button class="toggle-desc-btn" onclick="toggleDesc('desc-2', this)" aria-expanded="false">
+                Pokaż więcej ▾
+              </button>
+            </div>
+            <div class="card-actions">
+              <button class="card-btn" aria-label="Skopiuj Dart Best Practices do schowka">📋 Kopiuj</button>
+              <button class="card-btn yt-btn" aria-label="Otwórz Dart Best Practices w YouTube">▶ YouTube</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- KARTA 3 (krótki opis — sprawdzamy czy przyciski są wyrównane) -->
+        <article class="video-card" role="listitem" tabindex="0"
+                 aria-label="Python Performance – Tech With Tim">
+          <div class="card-thumb" aria-hidden="true">
+            <span class="thumb-placeholder">▶</span>
+            <span class="card-dur">28:44</span>
+          </div>
+          <div class="card-body">
+            <div class="card-channel">
+              <div class="card-avatar" style="background:#2e7d32;" aria-hidden="true">T</div>
+              <span class="card-channel-name">Tech With Tim</span>
+              <span class="card-date">31 maj 2026</span>
+            </div>
+            <h2 class="card-title">Python Performance Tips – 10 technik o 10x szybszy kod</h2>
+            <div class="card-sep" role="separator"></div>
+            <div class="card-desc-wrap">
+              <p class="card-desc-label" id="dl-3">Opis</p>
+              <p class="card-desc" id="desc-3" aria-labelledby="dl-3">
+                Praktyczne optymalizacje: list comprehensions vs generatory, cProfile, asyncio dla I/O bound tasks, NumPy dla numeryki, Cython dla krytycznych ścieżek.
+              </p>
+              <!-- krótki opis — brak przycisku (sprawdzane przez JS) -->
+            </div>
+            <div class="card-actions">
+              <button class="card-btn" aria-label="Skopiuj Python Performance do schowka">📋 Kopiuj</button>
+              <button class="card-btn yt-btn" aria-label="Otwórz Python Performance w YouTube">▶ YouTube</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- KARTA 4 -->
+        <article class="video-card" role="listitem" tabindex="0"
+                 aria-label="AI in 2026 – Two Minute Papers">
+          <div class="card-thumb" aria-hidden="true">
+            <span class="thumb-placeholder">▶</span>
+            <span class="card-dur">12:08</span>
+          </div>
+          <div class="card-body">
+            <div class="card-channel">
+              <div class="card-avatar" style="background:#6a1b9a;" aria-hidden="true">T</div>
+              <span class="card-channel-name">Two Minute Papers</span>
+              <span class="card-date">30 maj 2026</span>
+            </div>
+            <h2 class="card-title">AI in 2026: Przegląd przełomowych badań – co zmieniło reguły gry?</h2>
+            <div class="card-sep" role="separator"></div>
+            <div class="card-desc-wrap">
+              <p class="card-desc-label" id="dl-4">Opis</p>
+              <p class="card-desc" id="desc-4" aria-labelledby="dl-4">
+                Najważniejsze prace naukowe z Q1 2026: nowe architektury modeli językowych, przełomy w multimodalności, efektywność energetyczna trenowania, zastosowania w medycynie i naukach przyrodniczych. Omówienie 10 przełomowych badań w 12 minutach.
+              </p>
+              <button class="toggle-desc-btn" onclick="toggleDesc('desc-4', this)" aria-expanded="false">
+                Pokaż więcej ▾
+              </button>
+            </div>
+            <div class="card-actions">
+              <button class="card-btn" aria-label="Skopiuj AI 2026 do schowka">📋 Kopiuj</button>
+              <button class="card-btn yt-btn" aria-label="Otwórz AI 2026 w YouTube">▶ YouTube</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- KARTA 5 -->
+        <article class="video-card" role="listitem" tabindex="0"
+                 aria-label="React 19 – Traversy Media">
+          <div class="card-thumb" aria-hidden="true">
+            <span class="thumb-placeholder">▶</span>
+            <span class="card-dur">18:20</span>
+          </div>
+          <div class="card-body">
+            <div class="card-channel">
+              <div class="card-avatar" style="background:#0277bd;" aria-hidden="true">T</div>
+              <span class="card-channel-name">Traversy Media</span>
+              <span class="card-date">29 maj 2026</span>
+            </div>
+            <h2 class="card-title">React 19 Server Components – Pełny tutorial dla fullstack developerów</h2>
+            <div class="card-sep" role="separator"></div>
+            <div class="card-desc-wrap">
+              <p class="card-desc-label" id="dl-5">Opis</p>
+              <p class="card-desc" id="desc-5" aria-labelledby="dl-5">
+                Kompletny przewodnik po React 19 Server Components. Różnice między Server a Client Components, streaming z Suspense, cache i revalidation, integracja z Next.js 15 App Router.
+              </p>
+              <button class="toggle-desc-btn" onclick="toggleDesc('desc-5', this)" aria-expanded="false">
+                Pokaż więcej ▾
+              </button>
+            </div>
+            <div class="card-actions">
+              <button class="card-btn" aria-label="Skopiuj React 19 do schowka">📋 Kopiuj</button>
+              <button class="card-btn yt-btn" aria-label="Otwórz React 19 w YouTube">▶ YouTube</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- KARTA 6 -->
+        <article class="video-card" role="listitem" tabindex="0"
+                 aria-label="PyCon Keynote – PyCon US">
+          <div class="card-thumb" aria-hidden="true">
+            <span class="thumb-placeholder">▶</span>
+            <span class="card-dur">55:10</span>
+          </div>
+          <div class="card-body">
+            <div class="card-channel">
+              <div class="card-avatar" style="background:#c62828;" aria-hidden="true">P</div>
+              <span class="card-channel-name">PyCon US</span>
+              <span class="card-date">28 maj 2026</span>
+            </div>
+            <h2 class="card-title">Keynote PyCon US 2026 – Przyszłość Pythona, GIL removal i nowe narzędzia</h2>
+            <div class="card-sep" role="separator"></div>
+            <div class="card-desc-wrap">
+              <p class="card-desc-label" id="dl-6">Opis</p>
+              <p class="card-desc" id="desc-6" aria-labelledby="dl-6">
+                Przemówienie otwierające PyCon US 2026. Free-threaded mode (no-GIL) w Pythonie 3.14, nowy system pakietowania, ulepszenia JIT compilera oraz plany rozwoju na 2026-2028. Guido van Rossum i core team o przyszłości języka.
+              </p>
+              <button class="toggle-desc-btn" onclick="toggleDesc('desc-6', this)" aria-expanded="false">
+                Pokaż więcej ▾
+              </button>
+            </div>
+            <div class="card-actions">
+              <button class="card-btn" aria-label="Skopiuj PyCon Keynote do schowka">📋 Kopiuj</button>
+              <button class="card-btn yt-btn" aria-label="Otwórz PyCon Keynote w YouTube">▶ YouTube</button>
+            </div>
+          </div>
+        </article>
+
+      </div><!-- /tiles-grid -->
+    </div><!-- /tiles-panel -->
+
+    <!-- AI SIDE PANEL -->
+    <aside class="ai-panel" id="aiPanel" aria-label="Panel asystenta AI">
+      <div class="ai-header">
+        <div class="ai-icon-pill" aria-hidden="true">🤖</div>
+        <div class="ai-header-text">
+          <div class="ai-title">AI Assistant</div>
+          <div class="ai-subtitle">Gemini 1.5 Flash · tylko twoje subskrypcje</div>
+        </div>
+        <div class="ai-live" aria-label="Asystent gotowy">
+          <div class="ai-live-dot"></div>gotowy
+        </div>
+      </div>
+
+      <div class="ai-quick" role="group" aria-label="Szybkie pytania">
+        <button class="ai-chip" onclick="sendQuick('Podsumuj ten tydzień')">📊 Podsumuj</button>
+        <button class="ai-chip" onclick="sendQuick('Znajdź filmy o Python')">🔍 Python</button>
+        <button class="ai-chip" onclick="sendQuick('Top kanały')">📺 Kanały</button>
+      </div>
+
+      <div class="ai-messages" id="aiMessages" aria-live="polite" aria-label="Konwersacja z AI">
+        <div class="ai-msg">
+          <div class="ai-av bot" aria-hidden="true">🤖</div>
+          <div class="ai-bubble bot">
+            Cześć, Łukasz! Mam dostęp do <strong>6 filmów</strong> z Twoich subskrypcji. O co pytasz?
+          </div>
+        </div>
+        <div class="ai-msg user">
+          <div class="ai-av user" aria-hidden="true">Ł</div>
+          <div class="ai-bubble user">Znajdź coś o Pythonie</div>
+        </div>
+        <div class="ai-msg">
+          <div class="ai-av bot" aria-hidden="true">🤖</div>
+          <div class="ai-bubble bot">
+            Znalazłem <strong>2 filmy</strong> o Pythonie:
+            <div class="res">
+              <div class="res-thumb" aria-hidden="true">▶</div>
+              <div>
+                <div class="res-title">Python Performance Tips – 10x szybszy kod</div>
+                <div class="res-meta">Tech With Tim · 28:44</div>
+              </div>
+            </div>
+            <div class="res" style="margin-top:5px;">
+              <div class="res-thumb" aria-hidden="true">▶</div>
+              <div>
+                <div class="res-title">Keynote PyCon US 2026 – GIL removal</div>
+                <div class="res-meta">PyCon US · 55:10</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ai-msg user">
+          <div class="ai-av user" aria-hidden="true">Ł</div>
+          <div class="ai-bubble user">Który film polecasz na dziś?</div>
+        </div>
+        <div class="ai-msg" id="typingMsg">
+          <div class="ai-av bot" aria-hidden="true">🤖</div>
+          <div class="ai-bubble bot">
+            <div class="ai-typing" aria-label="Asystent pisze..."><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ai-input-row">
+        <input class="ai-input" type="text" placeholder="Zapytaj o swoje filmy..." aria-label="Wpisz pytanie do asystenta" id="aiInput" onkeydown="if(event.key==='Enter')sendAI()">
+        <button class="ai-send" onclick="sendAI()" aria-label="Wyślij wiadomość">➤</button>
+      </div>
+      <div class="ai-note">Dane nie opuszczają urządzenia</div>
+    </aside>
+
+  </div><!-- /window-body -->
+
+  <!-- Status bar -->
+  <div class="statusbar" role="status" aria-live="polite">
+    <div>
+      <span class="status-dot" aria-hidden="true"></span>
+      <span style="color:var(--text-secondary);">Ostatnia aktualizacja: dziś, 09:14 · Dane z cache</span>
+    </div>
+    <span>↑↓ nawigacja · Enter otwórz · C kopiuj</span>
+  </div>
+
+</div><!-- /app-window -->
+
+<!-- ══════════════════════════════════════════════════
+     PODGLĄD USTAWIEŃ (biały tekst toggle)
+══════════════════════════════════════════════════ -->
+<p class="sec-label">Dialog Ustawień — przełącznik białych czcionek</p>
+
+<div class="settings-preview" id="settingsPreview">
+  <div class="settings-header">
+    <h2 class="settings-title">⚙ Ustawienia</h2>
+    <button class="settings-close" aria-label="Zamknij">✕</button>
+  </div>
+  <div class="settings-body">
+
+    <!-- Motyw -->
+    <fieldset class="settings-section" style="border:none;">
+      <legend class="settings-label">Motyw</legend>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div class="radio-row">
+          <div class="radio-dot"></div>
+          <span class="radio-text">☀️ Jasny</span>
+        </div>
+        <div class="radio-row selected">
+          <div class="radio-dot"></div>
+          <span class="radio-text">🌙 Ciemny</span>
+          <span class="radio-sub">aktywny</span>
+        </div>
+        <div class="radio-row">
+          <div class="radio-dot"></div>
+          <span class="radio-text">💻 Systemowy</span>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- Rozmiar tekstu -->
+    <div class="settings-section">
+      <p class="settings-label">Rozmiar tekstu</p>
+      <div class="font-btns" role="radiogroup" aria-label="Rozmiar czcionki">
+        <button class="fbtn" aria-pressed="false">
+          <span class="fbtn-preview" style="font-size:12px;">Aa</span>
+          <span class="fbtn-label">Mały</span>
+        </button>
+        <button class="fbtn active" aria-pressed="true">
+          <span class="fbtn-preview" style="font-size:14px;">Aa</span>
+          <span class="fbtn-label">Normalny</span>
+        </button>
+        <button class="fbtn" aria-pressed="false">
+          <span class="fbtn-preview" style="font-size:16px;">Aa</span>
+          <span class="fbtn-label">Duży</span>
+        </button>
+        <button class="fbtn" aria-pressed="false">
+          <span class="fbtn-preview" style="font-size:18px;">Aa</span>
+          <span class="fbtn-label">B. duży</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TOGGLE: Białe czcionki — NOWE -->
+    <div class="settings-section">
+      <p class="settings-label">Dostępność tekstu</p>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-title">Białe czcionki</div>
+          <div class="toggle-desc">Wszystkie etykiety i opisy wyświetlane w kolorze białym — bez względu na wybrany motyw. Zwiększa czytelność na ciemnym tle.</div>
+        </div>
+        <button class="sw white-sw" id="settingsWhiteSw"
+                role="switch" aria-checked="false"
+                aria-label="Przełącz białe czcionki"
+                onclick="toggleWhiteText()">
+          <div class="sw-k"></div>
+        </button>
+      </div>
+
+      <!-- inne toggle'e dla kontekstu -->
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-title">Sprawdzaj w tle</div>
+          <div class="toggle-desc">Powiadamiaj o nowych filmach co 24h</div>
+        </div>
+        <button class="sw on" role="switch" aria-checked="true" aria-label="Sprawdzaj w tle">
+          <div class="sw-k"></div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Język -->
+    <fieldset class="settings-section" style="border:none;">
+      <legend class="settings-label">Język</legend>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div class="radio-row selected">
+          <div class="radio-dot"></div>
+          <span class="radio-text">🇵🇱 Polski</span>
+        </div>
+        <div class="radio-row">
+          <div class="radio-dot"></div>
+          <span class="radio-text">🇬🇧 English</span>
+        </div>
+      </div>
+    </fieldset>
+
+  </div>
+  <div class="settings-footer">
+    <button class="btn-danger">🚪 Wyloguj się</button>
+    <button class="btn-primary">Zapisz i zamknij</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════ -->
+<script>
+  // ── Elementy ──────────────────────────────────────
+  const appWindow       = document.getElementById('appWindow');
+  const settingsPreview = document.getElementById('settingsPreview');
+  const wtToggle        = document.getElementById('wtToggle');
+  const wtPill          = document.getElementById('wtPill');
+  const settingsWhiteSw = document.getElementById('settingsWhiteSw');
+  const aiPanel         = document.getElementById('aiPanel');
+  const aiToggleBtn     = document.getElementById('aiToggleBtn');
+  const aiMessages      = document.getElementById('aiMessages');
+  const aiInput         = document.getElementById('aiInput');
+  const typingMsg       = document.getElementById('typingMsg');
+
+  let whiteTextOn = false;
+  let aiOpen      = true;
+
+  // ── Inicjalizacja ─────────────────────────────────
+  // Ukryj przycisk "Pokaż więcej" na kartach z krótkim opisem
+  document.querySelectorAll('.card-desc').forEach(desc => {
+    // Sprawdź czy opis jest obcięty
+    requestAnimationFrame(() => {
+      if (desc.scrollHeight <= desc.clientHeight + 2) {
+        const btn = desc.parentElement.querySelector('.toggle-desc-btn');
+        if (btn) btn.style.display = 'none';
+      }
+    });
+  });
+
+  // ── Zmiana motywu ─────────────────────────────────
+  function setTheme(btn) {
+    document.querySelectorAll('.theme-btn').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
+
+    const theme = btn.dataset.theme;
+    if (theme === 'dark-crimson') {
+      appWindow.removeAttribute('data-theme');
+      settingsPreview.removeAttribute('data-theme');
+    } else {
+      appWindow.setAttribute('data-theme', theme);
+      settingsPreview.setAttribute('data-theme', theme);
+    }
+  }
+
+  // ── Białe czcionki toggle ─────────────────────────
+  function toggleWhiteText() {
+    whiteTextOn = !whiteTextOn;
+
+    // Aktualizuj picker
+    wtToggle.classList.toggle('active', whiteTextOn);
+    wtPill.classList.toggle('on', whiteTextOn);
+    wtToggle.setAttribute('aria-checked', whiteTextOn);
+
+    // Aktualizuj switch w settings
+    settingsWhiteSw.classList.toggle('on', whiteTextOn);
+    settingsWhiteSw.setAttribute('aria-checked', whiteTextOn);
+
+    // Aplikuj na okno + settings
+    const val = whiteTextOn ? 'true' : 'false';
+    appWindow.setAttribute('data-white-text', val);
+    settingsPreview.setAttribute('data-white-text', val);
+  }
+
+  // ── Pokaż więcej / Pokaż mniej ────────────────────
+  function toggleDesc(id, btn) {
+    const desc = document.getElementById(id);
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+
+    if (expanded) {
+      desc.classList.remove('expanded');
+      btn.textContent = 'Pokaż więcej ▾';
+      btn.setAttribute('aria-expanded', 'false');
+    } else {
+      desc.classList.add('expanded');
+      btn.textContent = 'Pokaż mniej ▴';
+      btn.setAttribute('aria-expanded', 'true');
+    }
+  }
+
+  // ── AI panel toggle ───────────────────────────────
+  function toggleAI() {
+    aiOpen = !aiOpen;
+    aiPanel.classList.toggle('hidden', !aiOpen);
+    aiToggleBtn.classList.toggle('active', aiOpen);
+    aiToggleBtn.setAttribute('aria-pressed', aiOpen);
+  }
+
+  // ── AI send (mock) ────────────────────────────────
+  const aiReplies = [
+    'Na dziś polecam <strong>Flutter 3.0 Deep Dive</strong> (45 min) od Fireship – jeśli śledzisz Flutter, to obowiązkowe. Jeśli wolisz coś krótszego, świetny jest <strong>AI in 2026</strong> od Two Minute Papers – tylko 12 minut.',
+    'Najdłuższy film to <strong>PyCon 2026 Keynote</strong> (55 min). Łącznie masz <strong>3h 16min</strong> materiałów do obejrzenia.',
+    'Kanałem z największą aktywnością w tym tygodniu jest <strong>Fireship</strong> i <strong>Google Developers</strong>. Każdy opublikował jeden film.',
+    'W tym tygodniu dominuje <strong>Flutter/Dart</strong> (2 filmy), <strong>Python</strong> (2 filmy), <strong>AI/ML</strong> (1 film) i <strong>React</strong> (1 film).'
+  ];
+  let replyIdx = 0;
+
+  function sendAI() {
+    const text = aiInput.value.trim();
+    if (!text) return;
+
+    // Wstaw wiadomość użytkownika
+    const userMsg = document.createElement('div');
+    userMsg.className = 'ai-msg user';
+    userMsg.innerHTML = `
+      <div class="ai-av user" aria-hidden="true">Ł</div>
+      <div class="ai-bubble user">${text}</div>`;
+    aiMessages.insertBefore(userMsg, typingMsg);
+    aiInput.value = '';
+
+    // Pokaż typing
+    typingMsg.style.display = 'flex';
+    aiMessages.scrollTop = aiMessages.scrollHeight;
+
+    setTimeout(() => {
+      typingMsg.style.display = 'none';
+      const botMsg = document.createElement('div');
+      botMsg.className = 'ai-msg';
+      botMsg.innerHTML = `
+        <div class="ai-av bot" aria-hidden="true">🤖</div>
+        <div class="ai-bubble bot">${aiReplies[replyIdx % aiReplies.length]}</div>`;
+      aiMessages.insertBefore(botMsg, typingMsg);
+      replyIdx++;
+      aiMessages.scrollTop = aiMessages.scrollHeight;
+    }, 1200);
+  }
+
+  function sendQuick(text) {
+    aiInput.value = text;
+    sendAI();
+  }
+</script>
+
+</body>
+</html>

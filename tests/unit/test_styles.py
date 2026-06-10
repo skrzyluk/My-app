@@ -90,10 +90,11 @@ class TestVideoCardObjectNames:
         )
         card = _VideoCard(v)
         qtbot.addWidget(card)
-        copy_btn = next(
-            b for b in card.findChildren(QPushButton) if b.text() == "Kopiuj"
-        )
-        assert copy_btn.objectName() == "card_copy_btn"
+        copy_btns = [
+            b for b in card.findChildren(QPushButton)
+            if b.objectName() == "card_copy_btn"
+        ]
+        assert len(copy_btns) == 1
 
 
 class TestMainWindowObjectNames:

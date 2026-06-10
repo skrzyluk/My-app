@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from models.video import Video
 
 _PERIOD_LABELS = {
@@ -59,7 +59,7 @@ def _format_date(dt: datetime) -> str:
         "stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
         "lipca", "sierpnia", "września", "października", "listopada", "grudnia",
     ]
-    d = dt.astimezone(timezone.utc)
+    d = dt.astimezone()
     return f"{d.day} {months[d.month - 1]} {d.year}"
 
 

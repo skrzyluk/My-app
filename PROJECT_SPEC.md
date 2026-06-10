@@ -25,6 +25,7 @@ GUI Framework:      PyQt6
 State Management:   PyQt6 signals/slots
 Local Database:     SQLite (wbudowany sqlite3)
 API:                YouTube Data API v3
+Asystent AI:        Google Gemini (google-genai) – panel boczny
 Autentykacja:       OAuth 2.0 (google-auth-oauthlib)
 Bezpieczne hasła:   keyring (Windows Credential Manager)
 Powiadomienia:      winotify (Windows toast notifications)
@@ -261,7 +262,8 @@ Worst case (200 subskrypcji):
 
 ### 5.3 Error Handling
 ```
-1. HTTP 429 (quota exceeded):
+1. HTTP 403 (quota exceeded):
+   → YouTube API zwraca 403 (reason: quotaExceeded) po wyczerpaniu limitu
    → Pokaż komunikat "Dzienny limit API wyczerpany, spróbuj jutro"
    → Załaduj dane z cache jeśli dostępne
 
@@ -273,9 +275,10 @@ Worst case (200 subskrypcji):
    → Załaduj ostatni cache z SQLite
    → Pokaż info "Dane z cache (brak połączenia)"
 
-4. Inne błędy (4xx, 5xx):
+4. Inne błędy retryowalne (429, 500, 503):
    → Exponential backoff: 1s, 2s, 4s, 8s
    → Po 4 próbach → pokaż Error Dialog z dokładnym komunikatem
+   → Pozostałe 4xx/5xx → natychmiastowy Error Dialog (bez retry)
 
 Error Dialog:
   "Błąd YouTube API: [exact_error_message]"
@@ -372,10 +375,12 @@ youtube_notifier/
 │   ├── login_window.py            # Login screen
 │   ├── main_window.py             # Główne okno
 │   ├── settings_dialog.py         # Dialog ustawień
-│   └── history_dialog.py          # Dialog historii
+│   ├── history_dialog.py          # Dialog historii
+│   └── ai_chat_widget.py          # Boczny panel asystenta AI (Gemini)
 ├── services/
 │   ├── auth_service.py            # OAuth 2.0 + keyring
 │   ├── youtube_service.py         # YouTube API calls
+│   ├── ai_service.py              # Gemini chat session + keyring (klucz API)
 │   └── notification_service.py    # winotify wrapper
 ├── workers/
 │   └── background_worker.py       # QThread + QTimer
@@ -471,12 +476,15 @@ youtube_notifier/
 - [ ] Lokalizacja PL/EN
 - [ ] Logout
 
-### Phase 9: Frontend Design *(do zaprojektowania osobno)*
-- [ ] Styl wizualny – TBD
-- [ ] Custom QSS stylesheet
-- [ ] Własne widgety (VideoCard, SummaryCard)
-- [ ] Animacje (loading spinner, fade in)
-- [ ] Ikony i branding
+### Phase 9: Frontend Design ✅ *(wg `mockup-final-v4.html` + `DESIGN_DECISIONS.md`)*
+- [x] System designu – tokeny QSS w `resources/styles.py` (`build_qss`)
+- [x] 7 motywów: Dark Crimson/Ocean/Forest/Violet/Amber, Light Classic, High Contrast (+ Systemowy)
+- [x] Przełącznik białych czcionek + 4 rozmiary tekstu (Mały/Normalny/Duży/B. duży) – bez restartu
+- [x] Widok kafelkowy: responsywna siatka (`FlowLayout`, 3→2→1 kolumny)
+- [x] Własny widget `VideoCard` (miniatura 16:9, badge NOWY, avatar kanału, opis „Pokaż więcej/mniej", przyciski Kopiuj/YouTube)
+- [x] Toolbar (taby + licznik + akcje), pasek wyszukiwania (filtrowanie na żywo), status bar
+- [x] Redesign dialogu Ustawień (paleta motywów, rozmiar czcionki, białe czcionki, język, powiadomienia, klucz AI)
+- [x] **Panel AI (Gemini)** – boczny asystent z dostępem wyłącznie do pobranych filmów (`ui/ai_chat_widget.py`, `services/ai_service.py`)
 
 ### Phase 10: Testy + Polish
 - [ ] `pytest --cov` → ≥80% coverage
@@ -485,7 +493,7 @@ youtube_notifier/
 - [ ] Edge cases: brak internetu, 0 subskrypcji, quota exceeded
 
 ### Phase 11: Build & Dystrybucja
-- [ ] `build.spec` (PyInstaller, one-dir)
+- [ ] `build.spec` (PyInstaller, one-file – pojedynczy `.exe`)
 - [ ] Test `.exe` na czystym Windows 10 (bez Pythona)
 - [ ] Opcjonalnie: Inno Setup installer
 
@@ -509,7 +517,7 @@ tests/
 ✅ Pobranie subskrypcji z paginacją
 ✅ Pobranie filmów + filtrowanie po dacie
 ✅ Cache hit / miss / force refresh
-✅ Error handling (429, 401, brak internetu)
+✅ Error handling (403 quota, 401 token, retry 429/500/503, brak internetu)
 ✅ CRUD bazy danych
 ✅ Zapis summaries (deduplikacja)
 ✅ Background worker (mock QTimer)

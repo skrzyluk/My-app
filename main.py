@@ -17,7 +17,7 @@ def main():
 
     s = AppSettings()
     i18n.set_language(s.language())
-    apply_theme(app, s.theme())
+    apply_theme(app, s.theme(), white_text=s.white_text(), font_scale=s.font_size())
 
     window = LoginWindow()
     window.show()

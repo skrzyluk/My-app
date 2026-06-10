@@ -42,9 +42,26 @@ class VideoProvider:
         return self._fetch_and_store(period)
 
     def get_new_video_count(self, period: str) -> int:
-        """Return count of new videos since last saved summary (for notifications)."""
+        """Return count of cached videos published within *period* (no API call)."""
         cutoff = get_cutoff_date(period)
         return len(self._db.get_videos_since(cutoff))
+
+    def check_for_new_videos(self, period: str) -> int:
+        """Fetch from the API and return how many videos are newly discovered.
+
+        Compares the freshly fetched video IDs against what was already cached
+        for *period*, so the result is the number of genuinely new videos
+        (used by the background worker to decide whether to notify). Results
+        are persisted just like a normal refresh.
+        """
+        cutoff = get_cutoff_date(period)
+        known_ids = {v.video_id for v in self._db.get_videos_since(cutoff)}
+        videos = self._yt.fetch_new_videos(period)
+        if videos:
+            self._db.upsert_videos(videos)
+        self._db.mark_fetched()
+        self._save_summary(period, videos)
+        return sum(1 for v in videos if v.video_id not in known_ids)
 
     # ------------------------------------------------------------------ #
     # Internal                                                            #
@@ -54,6 +71,7 @@ class VideoProvider:
         videos = self._yt.fetch_new_videos(period)
         if videos:
             self._db.upsert_videos(videos)
+        self._db.mark_fetched()
         self._save_summary(period, videos)
         return videos
 

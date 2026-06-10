@@ -11,6 +11,7 @@ class Video:
     url: str
     duration: str        # formatted, e.g. '45:32' or '1:05:00'
     published_at: datetime
+    channel_title: str = ""   # display name of the channel (best-effort)
 
     @property
     def youtube_url(self) -> str:

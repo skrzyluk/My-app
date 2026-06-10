@@ -123,3 +123,53 @@ class TestGetNewVideoCount:
     def test_returns_zero_when_no_videos(self, provider):
         prov, _, db = provider
         assert prov.get_new_video_count("today") == 0
+
+
+class TestCheckForNewVideos:
+    def test_counts_only_newly_discovered(self, provider):
+        prov, mock_yt, db = provider
+        db.upsert_videos([_make_video("v1", hours_ago=1)])
+        # API returns the already-known v1 plus a new v2
+        mock_yt.fetch_new_videos.return_value = [
+            _make_video("v1", hours_ago=1),
+            _make_video("v2", hours_ago=1),
+        ]
+
+        new_count = prov.check_for_new_videos("today")
+
+        assert new_count == 1
+
+    def test_zero_when_nothing_new(self, provider):
+        prov, mock_yt, db = provider
+        db.upsert_videos([_make_video("v1", hours_ago=1)])
+        mock_yt.fetch_new_videos.return_value = [_make_video("v1", hours_ago=1)]
+
+        assert prov.check_for_new_videos("today") == 0
+
+    def test_persists_fetched_videos(self, provider):
+        prov, mock_yt, db = provider
+        mock_yt.fetch_new_videos.return_value = [_make_video("v1", hours_ago=1)]
+
+        prov.check_for_new_videos("today")
+
+        assert db.is_cache_fresh()
+
+    def test_marks_cache_fresh_even_with_zero_videos(self, provider):
+        prov, mock_yt, db = provider
+        mock_yt.fetch_new_videos.return_value = []
+
+        prov.check_for_new_videos("today")
+
+        # No videos stored, but the fetch marker keeps the cache fresh.
+        assert db.is_cache_fresh()
+
+
+class TestCacheFreshnessAfterEmptyFetch:
+    def test_no_refetch_after_empty_result(self, provider):
+        prov, mock_yt, db = provider
+        mock_yt.fetch_new_videos.return_value = []
+
+        prov.get_videos("today")        # cache stale → 1 API call
+        prov.get_videos("today")        # cache now fresh via marker → no 2nd call
+
+        mock_yt.fetch_new_videos.assert_called_once()

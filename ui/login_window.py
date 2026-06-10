@@ -44,7 +44,7 @@ class LoginWindow(QMainWindow):
         self._auth = AuthService()
         self._worker: _AuthWorker | None = None
         self.setWindowTitle(i18n.tr("window_title"))
-        self.setFixedSize(360, 240)
+        self.setFixedSize(380, 260)
         self._build_ui()
         self._try_auto_login()
 
@@ -54,18 +54,31 @@ class LoginWindow(QMainWindow):
 
         layout = QVBoxLayout(central)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.setSpacing(20)
+        layout.setSpacing(16)
+        layout.setContentsMargins(40, 40, 40, 40)
+
+        logo_lbl = QLabel("▶")
+        logo_lbl.setObjectName("login_logo")
+        logo_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        f = logo_lbl.font()
+        f.setPointSize(28)
+        logo_lbl.setFont(f)
+        layout.addWidget(logo_lbl)
 
         self._title_lbl = QLabel(i18n.tr("app_title"))
+        self._title_lbl.setObjectName("login_title")
         self._title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._title_lbl)
 
         self.status_label = QLabel("")
+        self.status_label.setObjectName("login_status")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.status_label)
 
         self.login_btn = QPushButton(i18n.tr("btn_login"))
-        self.login_btn.setFixedWidth(220)
+        self.login_btn.setObjectName("login_btn")
+        self.login_btn.setFixedHeight(42)
+        self.login_btn.setFixedWidth(240)
         self.login_btn.clicked.connect(self._on_login)
         layout.addWidget(self.login_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 

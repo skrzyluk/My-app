@@ -1,5 +1,3 @@
-from datetime import timezone
-
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QWidget, QFrame, QApplication,
@@ -23,7 +21,7 @@ _POLISH_MONTHS = [
 
 
 def _fmt_date(dt) -> str:
-    d = dt.astimezone(timezone.utc)
+    d = dt.astimezone()
     return f"{d.day} {_POLISH_MONTHS[d.month - 1]} {d.year}"
 
 
@@ -37,15 +35,15 @@ class HistoryDialog(QDialog):
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
 
-        self._header = QLabel(i18n.tr("dlg_history_title"))
-        f = self._header.font()
-        f.setPointSize(13)
+        header = QLabel(i18n.tr("dlg_history_title"))
+        f = header.font()
+        f.setPointSize(14)
         f.setBold(True)
-        self._header.setFont(f)
-        layout.addWidget(self._header)
+        header.setFont(f)
+        layout.addWidget(header)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -53,13 +51,14 @@ class HistoryDialog(QDialog):
         container = QWidget()
         self._items_layout = QVBoxLayout(container)
         self._items_layout.setContentsMargins(0, 0, 0, 0)
-        self._items_layout.setSpacing(6)
+        self._items_layout.setSpacing(8)
         self._items_layout.addStretch()
         scroll.setWidget(container)
         layout.addWidget(scroll, stretch=1)
 
         self._close_btn = QPushButton(i18n.tr("btn_close"))
         self._close_btn.setFixedWidth(100)
+        self._close_btn.setFixedHeight(32)
         self._close_btn.clicked.connect(self.accept)
         layout.addWidget(self._close_btn, alignment=Qt.AlignmentFlag.AlignRight)
 
@@ -69,8 +68,9 @@ class HistoryDialog(QDialog):
         summaries = self._db.get_summaries()
         if not summaries:
             placeholder = QLabel(i18n.tr("lbl_no_summaries"))
+            placeholder.setObjectName("history_empty")
             placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            placeholder.setStyleSheet("color: gray; padding: 40px;")
+            placeholder.setContentsMargins(0, 40, 0, 40)
             self._items_layout.insertWidget(0, placeholder)
             return
 
@@ -79,31 +79,33 @@ class HistoryDialog(QDialog):
 
     def _make_card(self, summary: Summary) -> QFrame:
         card = QFrame()
-        card.setFrameShape(QFrame.Shape.StyledPanel)
+        card.setObjectName("history_card")
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(4)
+        layout.setContentsMargins(14, 10, 14, 10)
+        layout.setSpacing(6)
 
         top = QHBoxLayout()
         top.setContentsMargins(0, 0, 0, 0)
+        top.setSpacing(8)
 
         date_lbl = QLabel(_fmt_date(summary.created_at))
-        f = date_lbl.font()
-        f.setBold(True)
-        date_lbl.setFont(f)
+        date_lbl.setObjectName("history_date")
         top.addWidget(date_lbl)
 
         period_key = _PERIOD_TR_KEYS.get(summary.period, "tab_today")
-        top.addWidget(QLabel(i18n.tr(period_key)))
+        period_lbl = QLabel(i18n.tr(period_key))
+        period_lbl.setObjectName("history_period")
+        top.addWidget(period_lbl)
 
         count_lbl = QLabel(i18n.tr("lbl_videos_count_fmt").format(summary.videos_count))
-        count_lbl.setStyleSheet("color: gray;")
+        count_lbl.setObjectName("history_count")
         top.addWidget(count_lbl)
 
         top.addStretch()
 
         copy_btn = QPushButton(i18n.tr("btn_copy"))
-        copy_btn.setFixedWidth(70)
+        copy_btn.setFixedWidth(72)
+        copy_btn.setFixedHeight(26)
         copy_btn.clicked.connect(
             lambda _checked=False, t=summary.summary_text: QApplication.clipboard().setText(t)
         )
@@ -115,8 +117,8 @@ class HistoryDialog(QDialog):
         if len(summary.summary_text) > 200:
             preview += "…"
         preview_lbl = QLabel(preview)
+        preview_lbl.setObjectName("history_preview")
         preview_lbl.setWordWrap(True)
-        preview_lbl.setStyleSheet("color: #555; font-size: 12px;")
         layout.addWidget(preview_lbl)
 
         return card

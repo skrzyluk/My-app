@@ -2,60 +2,69 @@ from PyQt6.QtGui import QPalette, QColor
 from PyQt6.QtWidgets import QApplication
 
 
-def apply_theme(app: QApplication, theme: str) -> None:
-    """Apply *theme* ('system' | 'light' | 'dark') to the running application."""
-    from resources.styles import LIGHT_QSS, DARK_QSS
-    if theme == "dark":
+def apply_theme(
+    app: QApplication,
+    theme: str,
+    *,
+    white_text: bool = False,
+    font_scale: str = "normal",
+) -> None:
+    """Apply *theme* to the running application.
+
+    *theme* may be ``"system"``, a legacy ``"light"``/``"dark"`` name, or one of
+    the named themes in :data:`resources.styles.THEMES` (e.g. ``"dark-ocean"``).
+    Anything unknown – including ``"system"`` – falls back to the native palette
+    with no stylesheet, so the OS look-and-feel shows through.
+    """
+    from resources.styles import THEMES, LIGHT_THEMES, _THEME_ALIASES, build_qss
+
+    if theme != "system" and (theme in THEMES or theme in _THEME_ALIASES):
+        resolved = theme if theme in THEMES else _THEME_ALIASES[theme]
         app.setStyle("Fusion")
-        app.setPalette(_dark_palette())
-        app.setStyleSheet(DARK_QSS)
-    elif theme == "light":
-        app.setStyle("Fusion")
-        app.setPalette(_light_palette())
-        app.setStyleSheet(LIGHT_QSS)
+        is_light = resolved in LIGHT_THEMES
+        app.setPalette(_palette_for(resolved, light=is_light))
+        app.setStyleSheet(build_qss(resolved, white_text=white_text, font_scale=font_scale))
     else:
         app.setStyle("")
         app.setPalette(QPalette())
         app.setStyleSheet("")
 
 
-def _light_palette() -> QPalette:
-    p = QPalette()
-    light     = QColor(245, 245, 245)
-    white     = QColor(255, 255, 255)
-    black     = QColor(33,  33,  33)
-    highlight = QColor(229, 57,  53)
+def _palette_for(theme: str, *, light: bool) -> QPalette:
+    """Build a QPalette from a theme's tokens (so accents/menus match the QSS)."""
+    from resources.styles import THEMES
 
-    p.setColor(QPalette.ColorRole.Window,          light)
-    p.setColor(QPalette.ColorRole.WindowText,      black)
-    p.setColor(QPalette.ColorRole.Base,            white)
-    p.setColor(QPalette.ColorRole.AlternateBase,   light)
-    p.setColor(QPalette.ColorRole.Text,            black)
-    p.setColor(QPalette.ColorRole.Button,          light)
-    p.setColor(QPalette.ColorRole.ButtonText,      black)
-    p.setColor(QPalette.ColorRole.Highlight,       highlight)
-    p.setColor(QPalette.ColorRole.HighlightedText, white)
+    t = THEMES[theme]
+    bg        = QColor(t["bg_app"])
+    surface   = QColor(t["bg_surface"])
+    text      = QColor(t["text_primary"])
+    secondary = QColor(t["text_secondary"])
+    accent    = QColor(t["accent"])
+    on_accent = QColor(t["text_on_accent"])
+
+    p = QPalette()
+    p.setColor(QPalette.ColorRole.Window,          bg)
+    p.setColor(QPalette.ColorRole.WindowText,      text)
+    p.setColor(QPalette.ColorRole.Base,            bg)
+    p.setColor(QPalette.ColorRole.AlternateBase,   surface)
+    p.setColor(QPalette.ColorRole.ToolTipBase,     surface)
+    p.setColor(QPalette.ColorRole.ToolTipText,     text)
+    p.setColor(QPalette.ColorRole.Text,            text)
+    p.setColor(QPalette.ColorRole.PlaceholderText, secondary)
+    p.setColor(QPalette.ColorRole.Button,          surface)
+    p.setColor(QPalette.ColorRole.ButtonText,      text)
+    p.setColor(QPalette.ColorRole.BrightText,      accent)
+    p.setColor(QPalette.ColorRole.Link,            accent)
+    p.setColor(QPalette.ColorRole.Highlight,       accent)
+    p.setColor(QPalette.ColorRole.HighlightedText, on_accent)
     return p
+
+
+def _light_palette() -> QPalette:
+    """Light palette (back-compat helper)."""
+    return _palette_for("light-classic", light=True)
 
 
 def _dark_palette() -> QPalette:
-    p = QPalette()
-    dark   = QColor(30,  30,  30)
-    darker = QColor(18,  18,  18)
-    white  = QColor(232, 234, 237)
-    red    = QColor(239, 83,  80)
-
-    p.setColor(QPalette.ColorRole.Window,          dark)
-    p.setColor(QPalette.ColorRole.WindowText,      white)
-    p.setColor(QPalette.ColorRole.Base,            darker)
-    p.setColor(QPalette.ColorRole.AlternateBase,   dark)
-    p.setColor(QPalette.ColorRole.ToolTipBase,     dark)
-    p.setColor(QPalette.ColorRole.ToolTipText,     white)
-    p.setColor(QPalette.ColorRole.Text,            white)
-    p.setColor(QPalette.ColorRole.Button,          dark)
-    p.setColor(QPalette.ColorRole.ButtonText,      white)
-    p.setColor(QPalette.ColorRole.BrightText,      QColor(255, 0, 0))
-    p.setColor(QPalette.ColorRole.Link,            red)
-    p.setColor(QPalette.ColorRole.Highlight,       red)
-    p.setColor(QPalette.ColorRole.HighlightedText, QColor(0, 0, 0))
-    return p
+    """Dark palette (back-compat helper)."""
+    return _palette_for("dark-crimson", light=False)

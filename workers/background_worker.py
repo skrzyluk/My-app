@@ -28,7 +28,7 @@ class BackgroundWorker(QThread):
 
     def _check(self):
         try:
-            count = self._provider.get_new_video_count("today")
+            count = self._provider.check_for_new_videos("today")
             logger.debug("Background check: %d new video(s) today.", count)
             if count > 0:
                 self.new_videos_found.emit(count)
