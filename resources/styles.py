@@ -302,7 +302,7 @@ QScrollBar:horizontal { height: 0px; }
 #video_card:hover { border-color: ${border_strong}; }
 #video_card[selected="true"] { border-color: ${accent}; }
 
-#card_thumb { background-color: ${bg_surface}; border-radius: 6px; }
+#card_thumb { background-color: ${bg_surface}; border-radius: 8px; }
 
 #thumb_placeholder { color: ${accent}; background-color: transparent; }
 
@@ -326,23 +326,23 @@ QScrollBar:horizontal { height: 0px; }
 
 #card_avatar {
     color: #ffffff;
-    font-size: ${fs_xs}px;
+    font-size: ${fs_sm}px;
     font-weight: 700;
-    border-radius: 11px;
+    border-radius: 13px;
 }
 
-#card_channel_name { color: ${text_secondary}; font-size: ${fs_sm}px; font-weight: 500; background: transparent; }
+#card_channel_name { color: ${text_secondary}; font-size: ${fs_base}px; font-weight: 500; background: transparent; }
 #card_date { color: ${text_muted}; font-size: ${fs_xs}px; background: transparent; }
-#card_title { color: ${text_primary}; font-size: ${fs_base}px; font-weight: 700; background: transparent; }
+#card_title { color: ${text_primary}; font-size: ${fs_md}px; font-weight: 700; background: transparent; }
 #card_sep { background-color: ${border}; max-height: 1px; min-height: 1px; border: none; }
 #card_desc_label { color: ${text_muted}; font-size: ${fs_xs}px; font-weight: 700; background: transparent; }
-#card_desc { color: ${text_secondary}; font-size: ${fs_sm}px; background: transparent; }
+#card_desc { color: ${text_secondary}; font-size: ${fs_base}px; background: transparent; }
 
 #toggle_desc_btn {
     color: ${accent};
     background: transparent;
     border: none;
-    font-size: ${fs_xs}px;
+    font-size: ${fs_sm}px;
     font-weight: 600;
     text-align: left;
     padding: 0px;
@@ -353,10 +353,10 @@ QPushButton[card_btn="true"] {
     background-color: ${bg_surface};
     color: ${text_secondary};
     border: 1px solid ${border};
-    border-radius: 5px;
-    font-size: ${fs_xs}px;
+    border-radius: 6px;
+    font-size: ${fs_sm}px;
     font-weight: 600;
-    padding: 6px 4px;
+    padding: 7px 6px;
 }
 QPushButton[card_btn="true"]:hover { background-color: ${bg_hover}; border-color: ${border_strong}; color: ${text_primary}; }
 
@@ -364,10 +364,10 @@ QPushButton[card_btn="yt"] {
     background-color: ${accent_subtle};
     color: ${accent};
     border: 1px solid ${accent_border};
-    border-radius: 5px;
-    font-size: ${fs_xs}px;
+    border-radius: 6px;
+    font-size: ${fs_sm}px;
     font-weight: 600;
-    padding: 6px 4px;
+    padding: 7px 6px;
 }
 QPushButton[card_btn="yt"]:hover { background-color: ${accent}; color: ${text_on_accent}; border-color: ${accent}; }
 

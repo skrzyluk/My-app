@@ -272,14 +272,14 @@ class SettingsDialog(QDialog):
                 QMessageBox.information(
                     self,
                     "Ollama – połączono ✅",
-                    f"Model „{model}" jest dostępny i gotowy do użycia.",
+                    f"Model „{model}” jest dostępny i gotowy do użycia.",
                 )
             else:
                 models_str = "\n".join(f"  • {m}" for m in available) if available else "  (brak pobranych modeli)"
                 QMessageBox.warning(
                     self,
                     "Ollama – model niedostępny",
-                    f"Połączono z Ollama, ale model „{model}" nie jest pobrany.\n\n"
+                    f"Połączono z Ollama, ale model „{model}” nie jest pobrany.\n\n"
                     f"Dostępne modele:\n{models_str}\n\n"
                     f"Pobierz model poleceniem:\n  ollama pull {model}",
                 )

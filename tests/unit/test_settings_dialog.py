@@ -16,7 +16,9 @@ def db():
 
 @pytest.fixture
 def dialog(qtbot, db):
-    with patch("ui.settings_dialog.AppSettings"):
+    with patch("ui.settings_dialog.AppSettings") as mock_settings:
+        mock_settings.return_value.ollama_url.return_value = "http://localhost:11434"
+        mock_settings.return_value.ollama_model.return_value = "llama3"
         dlg = SettingsDialog(db)
         qtbot.addWidget(dlg)
         yield dlg, db

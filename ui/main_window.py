@@ -4,10 +4,13 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QLabel, QScrollArea, QFrame, QApplication, QMessageBox, QMenu, QSystemTrayIcon,
-    QSplitter, QLineEdit, QLayout, QSizePolicy,
+    QSplitter, QLineEdit, QSizePolicy,
 )
-from PyQt6.QtGui import QIcon, QCloseEvent, QPixmap, QPainter, QPainterPath, QColor
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QUrl, QRect, QSize, QPoint
+from PyQt6.QtGui import (
+    QIcon, QCloseEvent, QPixmap, QPainter, QPainterPath, QColor,
+    QDesktopServices,
+)
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QUrl, QTimer
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 from PyQt6 import sip
 from google.oauth2.credentials import Credentials
@@ -40,10 +43,11 @@ _AVATAR_COLORS = [
     "#c62828", "#0277bd", "#ef6c00", "#00838f",
 ]
 
-_CARD_WIDTH = 300
-_CARD_HEIGHT = 392           # fixed height so every collapsed tile is identical
-_DESC_MAX_HEIGHT = 54        # ~3 lines while collapsed
+#: Collapsed description shows a short preview; the toggle reveals the full text.
+_DESC_MAX_HEIGHT = 60        # ~3 lines while collapsed
 _DESC_COLLAPSE_CHARS = 160   # show the "show more" toggle past this length
+_ROW_MARGIN = 12             # padding inside each list row
+_ROW_SPACING = 12            # vertical gap between list rows
 
 
 def _fmt_date(dt: datetime) -> str:
@@ -99,96 +103,12 @@ class _FetchWorker(QThread):
 
 
 # ─────────────────────────────────────────────────────────────────────────── #
-#  Flow layout (responsive tile grid: reflows 3 → 2 → 1 columns)              #
+#  Thumbnail (left of each list row)                                          #
 # ─────────────────────────────────────────────────────────────────────────── #
 
-class FlowLayout(QLayout):
-    """A layout that arranges children left-to-right and wraps to new rows."""
-
-    def __init__(self, parent=None, margin: int = 14, spacing: int = 12):
-        super().__init__(parent)
-        if parent is not None:
-            self.setContentsMargins(margin, margin, margin, margin)
-        self.setSpacing(spacing)
-        self._items: list = []
-
-    def addItem(self, item):
-        self._items.append(item)
-
-    def count(self) -> int:
-        return len(self._items)
-
-    def itemAt(self, index):
-        if 0 <= index < len(self._items):
-            return self._items[index]
-        return None
-
-    def takeAt(self, index):
-        if 0 <= index < len(self._items):
-            return self._items.pop(index)
-        return None
-
-    def expandingDirections(self):
-        return Qt.Orientation(0)
-
-    def hasHeightForWidth(self) -> bool:
-        return True
-
-    def heightForWidth(self, width: int) -> int:
-        return self._do_layout(QRect(0, 0, width, 0), test_only=True)
-
-    def setGeometry(self, rect: QRect):
-        super().setGeometry(rect)
-        self._do_layout(rect, test_only=False)
-
-    def sizeHint(self) -> QSize:
-        return self.minimumSize()
-
-    def minimumSize(self) -> QSize:
-        size = QSize()
-        for item in self._items:
-            size = size.expandedTo(item.sizeHint())
-        m = self.contentsMargins()
-        size += QSize(m.left() + m.right(), m.top() + m.bottom())
-        return size
-
-    def _do_layout(self, rect: QRect, test_only: bool) -> int:
-        m = self.contentsMargins()
-        x = rect.x() + m.left()
-        y = rect.y() + m.top()
-        right = rect.right() - m.right()
-        line_height = 0
-        spacing = self.spacing()
-
-        for item in self._items:
-            hint = item.sizeHint()
-            w, h = hint.width(), hint.height()
-            # Respect the widget's own min/max height so fixed-size cards
-            # (collapsed tiles) all lay out at an identical height.
-            wgt = item.widget()
-            if wgt is not None:
-                h = max(h, wgt.minimumHeight())
-                if wgt.maximumHeight() < (1 << 24):
-                    h = min(h, wgt.maximumHeight())
-            if x + w > right + 1 and line_height > 0:
-                x = rect.x() + m.left()
-                y += line_height + spacing
-                line_height = 0
-            if not test_only:
-                item.setGeometry(QRect(QPoint(x, y), QSize(w, h)))
-            x += w + spacing
-            line_height = max(line_height, h)
-
-        return y + line_height + m.bottom() - rect.y()
-
-
-# ─────────────────────────────────────────────────────────────────────────── #
-#  Thumbnail (top of the card)                                                #
-# ─────────────────────────────────────────────────────────────────────────── #
-
-_THUMB_W = _CARD_WIDTH - 2
-_THUMB_H = round(_THUMB_W * 9 / 16)
-_THUMB_RADIUS = 6
+_THUMB_W = 200
+_THUMB_H = round(_THUMB_W * 9 / 16)   # 112 – 16:9
+_THUMB_RADIUS = 8
 
 _net_manager: QNetworkAccessManager | None = None
 
@@ -201,8 +121,13 @@ def _network_manager() -> QNetworkAccessManager:
 
 
 def _thumb_url(video_id: str) -> str:
-    """YouTube thumbnail URL – available without an API call."""
-    return f"https://i.ytimg.com/vi/{video_id}/mqdefault.jpg"
+    """YouTube thumbnail URL – available without an API call.
+
+    ``hqdefault`` (480×360) stays crisp even downscaled to the list thumbnail.
+    It is 4:3 with letterbox bars on 16:9 videos; :func:`_rounded_pixmap`
+    cover-crops to 16:9, which removes them.
+    """
+    return f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
 
 
 def _rounded_pixmap(src: QPixmap, w: int, h: int, radius: int = _THUMB_RADIUS) -> QPixmap:
@@ -239,7 +164,7 @@ def _placeholder_pixmap(accent: str = "#ff0000", bg: str = "#1c1c1c") -> QPixmap
     painter.fillPath(path, QColor(bg))
     painter.setPen(QColor(accent))
     font = painter.font()
-    font.setPointSize(28)
+    font.setPointSize(34)
     painter.setFont(font)
     painter.drawText(pm.rect(), Qt.AlignmentFlag.AlignCenter, "▶")
     painter.end()
@@ -247,20 +172,32 @@ def _placeholder_pixmap(accent: str = "#ff0000", bg: str = "#1c1c1c") -> QPixmap
 
 
 class _Thumbnail(QLabel):
-    """16:9 thumbnail with a duration badge and optional NEW badge."""
+    """16:9 thumbnail with a duration badge. Click opens the video in the browser."""
 
     def __init__(self, video: Video, parent=None):
         super().__init__(parent)
         self.setObjectName("card_thumb")
         self.setFixedSize(_THUMB_W, _THUMB_H)
         self.setPixmap(_placeholder_pixmap())
+        self._url = video.url
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setToolTip(i18n.tr("btn_card_youtube"))
 
         self._badge = QLabel(video.duration, self)
         self._badge.setObjectName("card_dur")
+        # Let clicks pass through the badge to the thumbnail underneath.
+        self._badge.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._badge.adjustSize()
 
         self._position_badge()
         self._load(video.video_id)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self._url:
+            QDesktopServices.openUrl(QUrl(self._url))
+            event.accept()
+            return
+        super().mousePressEvent(event)
 
     def _position_badge(self):
         self._badge.move(
@@ -268,9 +205,16 @@ class _Thumbnail(QLabel):
             _THUMB_H - self._badge.height() - 7,
         )
 
-    def _load(self, video_id: str):
+    def _load(self, video_id: str, attempt: int = 1):
+        self._video_id = video_id
+        self._attempt = attempt
         try:
-            reply = _network_manager().get(QNetworkRequest(QUrl(_thumb_url(video_id))))
+            req = QNetworkRequest(QUrl(_thumb_url(video_id)))
+            req.setAttribute(
+                QNetworkRequest.Attribute.RedirectPolicyAttribute,
+                QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy,
+            )
+            reply = _network_manager().get(req)
             reply.finished.connect(lambda r=reply: self._on_loaded(r))
         except Exception:
             logger.debug("Thumbnail request failed to start", exc_info=True)
@@ -285,6 +229,14 @@ class _Thumbnail(QLabel):
                     self.setPixmap(_rounded_pixmap(pm, _THUMB_W, _THUMB_H))
                     self._badge.raise_()
                     self._position_badge()
+                    return
+            # Failed / empty (transient congestion, redirect, throttling): retry once.
+            if self._attempt < 2:
+                QTimer.singleShot(
+                    1200,
+                    lambda: None if sip.isdeleted(self)
+                    else self._load(self._video_id, self._attempt + 1),
+                )
         except Exception:
             logger.debug("Thumbnail load failed", exc_info=True)
         finally:
@@ -303,8 +255,8 @@ class _VideoCard(QFrame):
         super().__init__(parent)
         self._video = video
         self.setObjectName("video_card")
-        self.setFixedWidth(_CARD_WIDTH)
-        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+        # Full-width list row that hugs its content vertically.
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self._desc_expanded = False
         self._desc: QLabel | None = None
         self._toggle_btn: QPushButton | None = None
@@ -320,100 +272,95 @@ class _VideoCard(QFrame):
         ]).lower()
 
     def _build(self):
-        root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
+        # List row: thumbnail (left) │ content column (right).
+        root = QHBoxLayout(self)
+        root.setContentsMargins(_ROW_MARGIN, _ROW_MARGIN, _ROW_MARGIN, _ROW_MARGIN)
+        root.setSpacing(14)
 
-        root.addWidget(_Thumbnail(self._video))
+        root.addWidget(_Thumbnail(self._video), 0, Qt.AlignmentFlag.AlignTop)
 
-        body = QWidget()
-        body_layout = QVBoxLayout(body)
-        body_layout.setContentsMargins(11, 11, 11, 11)
-        body_layout.setSpacing(8)
+        content = QVBoxLayout()
+        content.setContentsMargins(0, 0, 0, 0)
+        content.setSpacing(7)
 
-        # Channel row: avatar · name · date
+        # Channel row: avatar · name · … · date
         chan_row = QHBoxLayout()
-        chan_row.setSpacing(7)
+        chan_row.setSpacing(8)
         channel = self._video.channel_title or i18n.tr("card_no_channel")
 
         avatar = QLabel(channel[:1].upper())
         avatar.setObjectName("card_avatar")
-        avatar.setFixedSize(22, 22)
+        avatar.setFixedSize(24, 24)
         avatar.setAlignment(Qt.AlignmentFlag.AlignCenter)
         avatar.setStyleSheet(f"background-color: {_avatar_color(channel)};")
         chan_row.addWidget(avatar)
 
         name_lbl = QLabel(channel)
         name_lbl.setObjectName("card_channel_name")
-        chan_row.addWidget(name_lbl, 1)
+        chan_row.addWidget(name_lbl, 0)
+        chan_row.addStretch(1)
 
         date_lbl = QLabel(_fmt_date(self._video.published_at))
         date_lbl.setObjectName("card_date")
         chan_row.addWidget(date_lbl, 0, Qt.AlignmentFlag.AlignRight)
-        body_layout.addLayout(chan_row)
+        content.addLayout(chan_row)
 
-        # Title (clamped to 2 lines so every card starts the same height)
+        # Title – full text, word-wrapped, never truncated.
         title_lbl = QLabel(self._video.title)
         title_lbl.setObjectName("card_title")
         title_lbl.setWordWrap(True)
-        title_lbl.setMaximumHeight(40)
-        body_layout.addWidget(title_lbl)
+        content.addWidget(title_lbl)
 
-        # Separator
-        sep = QFrame()
-        sep.setObjectName("card_sep")
-        sep.setFixedHeight(1)
-        body_layout.addWidget(sep)
-
-        # Description
+        # Description (below the title)
         if self._video.description:
             desc_label = QLabel(i18n.tr("card_label_desc"))
             desc_label.setObjectName("card_desc_label")
-            body_layout.addWidget(desc_label)
+            content.addWidget(desc_label)
 
             self._desc = QLabel(self._video.description)
             self._desc.setObjectName("card_desc")
             self._desc.setWordWrap(True)
-            body_layout.addWidget(self._desc)
+            content.addWidget(self._desc)
 
             if len(self._video.description) > _DESC_COLLAPSE_CHARS:
                 self._toggle_btn = QPushButton(i18n.tr("btn_show_more"))
                 self._toggle_btn.setObjectName("toggle_desc_btn")
                 self._toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
                 self._toggle_btn.clicked.connect(self._toggle_desc)
-                body_layout.addWidget(self._toggle_btn, 0, Qt.AlignmentFlag.AlignLeft)
+                content.addWidget(self._toggle_btn, 0, Qt.AlignmentFlag.AlignLeft)
 
-        body_layout.addStretch()
-
-        # Action buttons – identical 2-column grid on every card
+        # Action buttons – left-aligned, fixed width
         actions = QHBoxLayout()
-        actions.setSpacing(6)
+        actions.setSpacing(8)
+        actions.setContentsMargins(0, 3, 0, 0)
 
         copy_btn = QPushButton(i18n.tr("btn_card_copy"))
         copy_btn.setObjectName("card_copy_btn")
         copy_btn.setProperty("card_btn", "true")
-        copy_btn.setFixedHeight(30)
+        copy_btn.setFixedHeight(31)
+        copy_btn.setMinimumWidth(120)
         copy_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         copy_btn.clicked.connect(self._copy)
-        actions.addWidget(copy_btn, 1)
+        actions.addWidget(copy_btn, 0)
 
         yt_btn = QPushButton(i18n.tr("btn_card_youtube"))
         yt_btn.setObjectName("card_yt_btn")
         yt_btn.setProperty("card_btn", "yt")
-        yt_btn.setFixedHeight(30)
+        yt_btn.setFixedHeight(31)
+        yt_btn.setMinimumWidth(120)
         yt_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         yt_btn.clicked.connect(self._open_youtube)
-        actions.addWidget(yt_btn, 1)
+        actions.addWidget(yt_btn, 0)
+        actions.addStretch(1)
 
-        body_layout.addLayout(actions)
-        root.addWidget(body)
+        content.addLayout(actions)
+        root.addLayout(content, 1)
 
     # ── Collapse / expand (accordion: only one card expanded at a time) ── #
 
     def _set_collapsed_geometry(self):
-        self.setMinimumHeight(_CARD_HEIGHT)
-        self.setMaximumHeight(_CARD_HEIGHT)
-        if self._desc is not None:
+        # Clamp only collapsible descriptions; short ones always show in full.
+        if self._desc is not None and self._toggle_btn is not None:
             self._desc.setMaximumHeight(_DESC_MAX_HEIGHT)
 
     def collapse(self):
@@ -429,7 +376,6 @@ class _VideoCard(QFrame):
         if self._desc_expanded:
             return
         self._desc_expanded = True
-        self.setMaximumHeight(16_777_215)
         if self._desc is not None:
             self._desc.setMaximumHeight(16_777_215)
         if self._toggle_btn:
@@ -450,7 +396,6 @@ class _VideoCard(QFrame):
         QApplication.clipboard().setText(build_single_video_text(self._video))
 
     def _open_youtube(self):
-        from PyQt6.QtGui import QDesktopServices
         QDesktopServices.openUrl(QUrl(self._video.url))
 
 
@@ -513,7 +458,10 @@ class MainWindow(QMainWindow):
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._videos_container = QWidget()
         self._videos_container.setObjectName("tiles_container")
-        self._videos_layout = FlowLayout(self._videos_container, margin=14, spacing=12)
+        self._videos_layout = QVBoxLayout(self._videos_container)
+        self._videos_layout.setContentsMargins(16, 16, 16, 16)
+        self._videos_layout.setSpacing(_ROW_SPACING)
+        self._videos_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._scroll.setWidget(self._videos_container)
         self._splitter.addWidget(self._scroll)
 
@@ -810,6 +758,9 @@ class MainWindow(QMainWindow):
             card.expanded.connect(self._on_card_expanded)
             self._cards.append(card)
             self._videos_layout.addWidget(card)
+
+        # Absorb any leftover height so rows keep their natural size at the top.
+        self._videos_layout.addStretch(1)
 
         # Re-apply any active search filter to the fresh cards.
         if self._search_input.text().strip():
