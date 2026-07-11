@@ -542,6 +542,22 @@ QPushButton[fontbtn="true"]:checked { border-color: ${accent}; background-color:
     font-size: ${fs_md}px;
 }
 #chat_close_btn:hover { background-color: ${bg_hover}; color: ${text_primary}; }
+#chat_new_btn {
+    background-color: transparent;
+    color: ${text_secondary};
+    border: none;
+    border-radius: 5px;
+    font-size: ${fs_sm}px;
+}
+#chat_new_btn:hover { background-color: ${bg_hover}; color: ${text_primary}; }
+#chat_copy_btn {
+    background-color: transparent;
+    color: ${text_muted};
+    border: none;
+    border-radius: 4px;
+    font-size: ${fs_sm}px;
+}
+#chat_copy_btn:hover { background-color: ${bg_hover}; color: ${text_primary}; }
 
 #quick_bar { background-color: ${bg_surface}; border-bottom: 1px solid ${border}; }
 #quick_prompt_btn {

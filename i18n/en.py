@@ -67,6 +67,9 @@ STRINGS: dict[str, str] = {
     "btn_chat_ai":            "\U0001f916 AI Chat",
     "chat_title":             "AI Assistant",
     "chat_close":             "Close chat",
+    "chat_new":               "New chat",
+    "chat_copy":              "Copy reply",
+    "chat_copied":            "Copied ✓",
     "chat_placeholder":       "Ask about videos… (Enter = send)",
     "chat_send":              "Send",
     "chat_welcome":           "Hi! I have access to {count} videos from {period}. I can summarize them, recommend what to watch, or answer questions about their topics. What would you like to know?",
@@ -81,12 +84,23 @@ STRINGS: dict[str, str] = {
     # Search
     "search_placeholder":     "Search videos…",
 
+    # Filters & sorting
+    "filter_channel_all":     "All channels",
+    "filter_unwatched":       "Unwatched only",
+    "sort_label":             "Sort:",
+    "sort_newest":            "Newest",
+    "sort_oldest":            "Oldest",
+    "sort_longest":           "Longest",
+    "sort_shortest":          "Shortest",
+
     # Video card
     "card_label_desc":        "DESCRIPTION",
     "btn_show_more":          "Show more ▾",
     "btn_show_less":          "Show less ▴",
     "btn_card_copy":          "📋 Copy",
     "btn_card_youtube":       "▶ YouTube",
+    "btn_card_mark_watched":  "✓ Watched",
+    "btn_card_mark_unwatched": "↺ Unwatched",
     "badge_new":              "NEW",
     "card_no_channel":        "Channel",
 
@@ -96,6 +110,7 @@ STRINGS: dict[str, str] = {
     "statusbar_cache":        "Cached data",
     "statusbar_hint":         "↑↓ navigate · Enter open · C copy",
     "video_count_fmt":        "📺 {count} {noun}",
+    "video_count_unwatched_fmt": "📺 {count} {noun} · {unwatched} unwatched",
 
     # Settings – appearance
     "lbl_appearance":         "Theme",

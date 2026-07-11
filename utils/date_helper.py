@@ -44,6 +44,24 @@ def parse_iso_duration(duration: str) -> str:
     return f"{minutes}:{seconds:02d}"
 
 
+def duration_to_seconds(formatted: str) -> int:
+    """Convert a formatted duration ('45:32', '1:05:00', '0:30') to seconds.
+
+    Returns 0 for empty/unparseable input. Used for sorting videos by length.
+    """
+    if not formatted:
+        return 0
+    parts = formatted.split(":")
+    try:
+        nums = [int(p) for p in parts]
+    except ValueError:
+        return 0
+    seconds = 0
+    for n in nums:
+        seconds = seconds * 60 + n
+    return seconds
+
+
 def parse_youtube_datetime(dt_str: str) -> datetime:
     """Parse a YouTube API datetime string to a timezone-aware datetime."""
     return datetime.fromisoformat(dt_str.replace("Z", "+00:00"))

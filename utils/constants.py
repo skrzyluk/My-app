@@ -12,11 +12,12 @@ LOG_PATH = APPDATA_DIR / "app.log"
 def get_client_secrets_path() -> Path:
     """Resolve client_secrets.json location.
 
-    When running as a PyInstaller bundle, the file is extracted to _MEIPASS.
+    Frozen exe: read from the user's %APPDATA%\\YouTubeNotifier\\ location (as in
+    the docs) - secrets are not baked into the exe.
     During development it lives in the project root.
     """
     if hasattr(sys, "_MEIPASS"):
-        return Path(sys._MEIPASS) / "client_secrets.json"
+        return APPDATA_DIR / "client_secrets.json"
     return Path(__file__).resolve().parent.parent / "client_secrets.json"
 
 

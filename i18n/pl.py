@@ -67,6 +67,9 @@ STRINGS: dict[str, str] = {
     "btn_chat_ai":            "\U0001f916 Czat AI",
     "chat_title":             "Asystent AI",
     "chat_close":             "Zamknij czat",
+    "chat_new":               "Nowy czat",
+    "chat_copy":              "Kopiuj odpowiedź",
+    "chat_copied":            "Skopiowano ✓",
     "chat_placeholder":       "Zapytaj o filmy… (Enter = wyślij)",
     "chat_send":              "Wyślij",
     "chat_welcome":           "Cześć! Mam dostęp do {count} filmów z {period}. Mogę je podsumować, polecić co oglądać lub odpowiedzieć na pytania o tematykę. Co Cię interesuje?",
@@ -81,12 +84,23 @@ STRINGS: dict[str, str] = {
     # Search
     "search_placeholder":     "Szukaj filmów…",
 
+    # Filters & sorting
+    "filter_channel_all":     "Wszystkie kanały",
+    "filter_unwatched":       "Tylko nieobejrzane",
+    "sort_label":             "Sortuj:",
+    "sort_newest":            "Najnowsze",
+    "sort_oldest":            "Najstarsze",
+    "sort_longest":           "Najdłuższe",
+    "sort_shortest":          "Najkrótsze",
+
     # Video card
     "card_label_desc":        "OPIS",
     "btn_show_more":          "Pokaż więcej ▾",
     "btn_show_less":          "Pokaż mniej ▴",
     "btn_card_copy":          "📋 Kopiuj",
     "btn_card_youtube":       "▶ YouTube",
+    "btn_card_mark_watched":  "✓ Obejrzane",
+    "btn_card_mark_unwatched": "↺ Nieobejrzane",
     "badge_new":              "NOWY",
     "card_no_channel":        "Kanał",
 
@@ -96,6 +110,7 @@ STRINGS: dict[str, str] = {
     "statusbar_cache":        "Dane z cache",
     "statusbar_hint":         "↑↓ nawigacja · Enter otwórz · C kopiuj",
     "video_count_fmt":        "📺 {count} {noun}",
+    "video_count_unwatched_fmt": "📺 {count} {noun} · {unwatched} nieobejrz.",
 
     # Settings – appearance
     "lbl_appearance":         "Motyw",
@@ -133,7 +148,7 @@ STRINGS: dict[str, str] = {
     "ai_provider_ollama":     "Ollama (lokalnie, bezpłatnie)",
     "lbl_ollama_url":         "Adres Ollama:",
     "lbl_ollama_model":       "Model:",
-    "hint_ollama":            "Ollama musi być uruchomione lokalnie. Pobierz model: ollama pull llama3.2",
+    "hint_ollama":            "Ollama musi być uruchomione lokalnie. Pobierz model: ollama pull llama3.2:3b",
     "btn_test_ollama":        "🔌 Testuj połączenie",
     "chat_no_ollama":         "Nie można połączyć się z Ollama.\n\nUpewnij się, że Ollama jest zainstalowane i uruchomione.\nSzczegóły: {error}",
 }

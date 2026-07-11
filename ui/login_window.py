@@ -46,7 +46,19 @@ class LoginWindow(QMainWindow):
         self.setWindowTitle(i18n.tr("window_title"))
         self.setFixedSize(380, 260)
         self._build_ui()
-        self._try_auto_login()
+
+    def start(self):
+        """Punkt wejscia po utworzeniu okna.
+
+        Jesli istnieje zapisana sesja, logujemy sie w tle BEZ pokazywania okna
+        logowania (zadnego ekranu poczatkowego) i od razu otwieramy glowne okno.
+        Ekran logowania pokazujemy tylko, gdy uzytkownik musi sie zalogowac.
+        """
+        if self._auth.is_logged_in():
+            self._set_busy(i18n.tr("status_logging_in"))
+            self._run_worker(auto_login=True)
+        else:
+            self.show()
 
     def _build_ui(self):
         central = QWidget()
@@ -82,12 +94,6 @@ class LoginWindow(QMainWindow):
         self.login_btn.clicked.connect(self._on_login)
         layout.addWidget(self.login_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
-    def _try_auto_login(self):
-        if not self._auth.is_logged_in():
-            return
-        self._set_busy(i18n.tr("status_logging_in"))
-        self._run_worker(auto_login=True)
-
     def _on_login(self):
         self._set_busy(i18n.tr("status_opening_browser"))
         self._run_worker(auto_login=False)
@@ -105,6 +111,9 @@ class LoginWindow(QMainWindow):
         self.close()
 
     def _on_auth_error(self, message: str):
+        # Auto-login moglo isc przy ukrytym oknie - pokaz je, by user mogl zareagowac
+        if not self.isVisible():
+            self.show()
         self._set_idle()
         QMessageBox.critical(self, i18n.tr("dlg_auth_error"), message)
 

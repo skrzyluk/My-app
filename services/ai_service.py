@@ -77,16 +77,35 @@ def build_video_context(videos: list) -> str:
     return "\n\n".join(lines)
 
 
+# Ujednolicona formula odmowy dla pytan spoza listy
+REFUSAL_PL = "Moge rozmawiac wylacznie o filmach z Twojej listy."
+
 _SYSTEM_PROMPT = (
-    "Jestes asystentem aplikacji YouTube Notifier. Twoim jedynym zadaniem jest "
-    "pomagac uzytkownikowi analizowac liste filmow podana ponizej.\n\n"
+    "Jestes asystentem aplikacji YouTube Notifier. Pomagasz uzytkownikowi "
+    "zorientowac sie w jego liscie pobranych filmow z YouTube (ponizej).\n\n"
     "ZASADY:\n"
-    "- Odpowiadaj wylacznie w oparciu o informacje z listy filmow.\n"
-    "- Jesli pytanie nie dotyczy filmow z listy, grzecznie odmow.\n"
-    "- Odpowiadaj po polsku, chyba ze uzytkownik pisze po angielsku.\n"
-    "- Badz zwiezly i konkretny.\n"
-    "- Mozesz polecac filmy, porownywac je, streszczac opisy i odpowiadac na "
-    "pytania o ich tematyke."
+    "- Odpowiadaj wylacznie na podstawie listy filmow ponizej. Nie dodawaj wiedzy "
+    "ogolnej spoza listy i nie wymyslaj filmow. Uzywaj tytulow i linkow doslownie "
+    "z listy.\n"
+    "- Gdy user pyta 'ktore/jakie filmy sa o <temat>' albo prosi o filtrowanie "
+    "listy, przejrzyj cala liste i wymien pasujace filmy po tytule wraz z linkiem. "
+    "Nie odpowiadaj sama liczba (np. 'dwa filmy') - zawsze wypisz ktore to sa. "
+    "Jesli zaden nie pasuje, napisz: 'Zaden film z listy nie dotyczy tego tematu'.\n"
+    "- Mozesz polecac filmy, porownywac je, streszczac opisy, sortowac po dlugosci "
+    "lub dacie. Kontynuacje typu 'podaj link', 'a drugi?', 'stresc go' obsluguj "
+    "normalnie.\n"
+    "- Jesli user prosi o cos zupelnie niezwiazanego z filmami (rozwiazanie "
+    "zadania matematycznego, napisanie kodu lub wiersza, zart, wyjasnienie "
+    f"ogolnego tematu), odpowiedz krotko: \"{REFUSAL_PL}\"\n"
+    "- Odpowiadaj po polsku (lub angielsku, jesli user pisze po angielsku), "
+    "zwiezle, ale zawsze konkretnie wymieniaj filmy, gdy o nie chodzi."
+)
+
+# Krotkie przypomnienie wstrzykiwane przy KAZDEJ turze (male modele lepiej
+# trzymaja sie regul, gdy sa one blisko biezacego pytania).
+_TURN_REMINDER = (
+    "Pamietaj: korzystaj tylko z listy filmow powyzej. Gdy pytanie dotyczy tematu "
+    "('ktore filmy o X'), przejrzyj liste i wymien pasujace tytuly z linkami."
 )
 
 
@@ -111,18 +130,28 @@ class OllamaChatSession:
     """
 
     DEFAULT_URL   = "http://localhost:11434"
-    DEFAULT_MODEL = "llama3.2"
+    DEFAULT_MODEL = "llama3.2:3b"
 
-    def __init__(self, videos: list, url: str = DEFAULT_URL, model: str = DEFAULT_MODEL):
+    DEFAULT_NUM_GPU = 999  # 999 = pelny offload na GPU (Nvidia). Jednolity backend
+                           # unika crasha llama-server przy czesciowym offloadzie
+                           # (GGML_SCHED_MAX_SPLIT_INPUTS). 0 = wszystko na CPU.
+
+    DEFAULT_TEMPERATURE = 0.1  # Niska temp = model trzyma sie listy filmow i nie
+                               # halucynuje tytulow spoza kontekstu.
+
+    def __init__(self, videos: list, url: str = DEFAULT_URL, model: str = DEFAULT_MODEL,
+                 num_gpu: int = DEFAULT_NUM_GPU, temperature: float = DEFAULT_TEMPERATURE):
         self._videos  = videos
         self._url     = url.rstrip("/")
         self._model   = model
+        self._num_gpu = num_gpu
+        self._temperature = temperature
         self._history: list[dict] = []
         self._system_prompt = build_system_prompt(videos)
         self._check_connection()
         logger.info(
-            "OllamaChatSession initialized (model=%s, url=%s, videos=%d)",
-            self._model, self._url, len(self._videos),
+            "OllamaChatSession initialized (model=%s, url=%s, num_gpu=%s, temp=%s, videos=%d)",
+            self._model, self._url, self._num_gpu, self._temperature, len(self._videos),
         )
 
     def _check_connection(self) -> None:
@@ -152,13 +181,24 @@ class OllamaChatSession:
     def send(self, user_message: str) -> str:
         import requests
         self._history.append({"role": "user", "content": user_message})
+        # Efemeryczna kopia biezacej tury z doklejonym przypomnieniem regul
+        # (nie zapisujemy go w historii, by nie zasmiecac kontekstu).
+        ephemeral_user = {
+            "role": "user",
+            "content": f"{user_message}\n\n[{_TURN_REMINDER}]",
+        }
         payload = {
             "model":    self._model,
             "messages": [
                 {"role": "system", "content": self._system_prompt},
-                *self._history,
+                *self._history[:-1],
+                ephemeral_user,
             ],
             "stream": False,
+            "options": {
+                "num_gpu":     self._num_gpu,
+                "temperature": self._temperature,
+            },
         }
         try:
             r = requests.post(f"{self._url}/api/chat", json=payload, timeout=120)
@@ -198,9 +238,13 @@ def create_chat_session(videos: list) -> OllamaChatSession:
     try:
         from config.settings import AppSettings
         s = AppSettings()
-        url   = s.ollama_url()
-        model = s.ollama_model()
+        url     = s.ollama_url()
+        model   = s.ollama_model()
+        num_gpu = s.ollama_num_gpu()
+        temp    = s.ollama_temperature()
     except Exception:
-        url   = OllamaChatSession.DEFAULT_URL
-        model = OllamaChatSession.DEFAULT_MODEL
-    return OllamaChatSession(videos, url=url, model=model)
+        url     = OllamaChatSession.DEFAULT_URL
+        model   = OllamaChatSession.DEFAULT_MODEL
+        num_gpu = OllamaChatSession.DEFAULT_NUM_GPU
+        temp    = OllamaChatSession.DEFAULT_TEMPERATURE
+    return OllamaChatSession(videos, url=url, model=model, num_gpu=num_gpu, temperature=temp)

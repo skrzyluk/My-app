@@ -177,3 +177,36 @@ class TestSettings:
         db.set_setting("theme", "dark")
         assert db.get_setting("language") == "pl"
         assert db.get_setting("theme") == "dark"
+
+
+# ------------------------------------------------------------------ #
+# watched state                                                       #
+# ------------------------------------------------------------------ #
+
+class TestWatchedState:
+    def _get(self, db, video_id="v1"):
+        cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=48)
+        return next(v for v in db.get_videos_since(cutoff) if v.video_id == video_id)
+
+    def test_default_not_watched(self, db):
+        db.upsert_videos([_make_video("v1")])
+        assert self._get(db).watched is False
+
+    def test_set_watched_true(self, db):
+        db.upsert_videos([_make_video("v1")])
+        db.set_watched("v1", True)
+        assert self._get(db).watched is True
+
+    def test_set_watched_toggle_back(self, db):
+        db.upsert_videos([_make_video("v1")])
+        db.set_watched("v1", True)
+        db.set_watched("v1", False)
+        assert self._get(db).watched is False
+
+    def test_watched_survives_reupsert(self, db):
+        # Re-fetching the same video must NOT reset its watched flag.
+        v = _make_video("v1")
+        db.upsert_videos([v])
+        db.set_watched("v1", True)
+        db.upsert_videos([v])  # simulate a refresh
+        assert self._get(db).watched is True

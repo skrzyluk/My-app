@@ -4,7 +4,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QLabel, QScrollArea, QFrame, QApplication, QMessageBox, QMenu, QSystemTrayIcon,
-    QSplitter, QLineEdit, QSizePolicy,
+    QSplitter, QLineEdit, QSizePolicy, QComboBox, QCheckBox, QGraphicsOpacityEffect,
 )
 from PyQt6.QtGui import (
     QIcon, QCloseEvent, QPixmap, QPainter, QPainterPath, QColor,
@@ -20,6 +20,7 @@ from database.db import Database
 from models.video import Video
 from services.video_provider import VideoProvider
 from utils.summary_builder import build_single_video_text, build_summary_text
+from utils.date_helper import duration_to_seconds
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -250,6 +251,8 @@ class _Thumbnail(QLabel):
 class _VideoCard(QFrame):
     # Emitted (with self) when this card expands its description.
     expanded = pyqtSignal(object)
+    # Emitted (with self) when the user toggles the watched state.
+    watched_toggled = pyqtSignal(object)
 
     def __init__(self, video: Video, parent=None):
         super().__init__(parent)
@@ -260,8 +263,18 @@ class _VideoCard(QFrame):
         self._desc_expanded = False
         self._desc: QLabel | None = None
         self._toggle_btn: QPushButton | None = None
+        self._watched_btn: QPushButton | None = None
+        self._dim_effect: QGraphicsOpacityEffect | None = None
         self._build()
         self._set_collapsed_geometry()
+        self._apply_watched_style()
+
+    @property
+    def video(self) -> Video:
+        return self._video
+
+    def duration_seconds(self) -> int:
+        return duration_to_seconds(self._video.duration)
 
     # Text used for searching/filtering.
     def search_text(self) -> str:
@@ -351,6 +364,15 @@ class _VideoCard(QFrame):
         yt_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         yt_btn.clicked.connect(self._open_youtube)
         actions.addWidget(yt_btn, 0)
+
+        self._watched_btn = QPushButton()
+        self._watched_btn.setObjectName("card_watched_btn")
+        self._watched_btn.setProperty("card_btn", "true")
+        self._watched_btn.setFixedHeight(31)
+        self._watched_btn.setMinimumWidth(120)
+        self._watched_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._watched_btn.clicked.connect(self._toggle_watched)
+        actions.addWidget(self._watched_btn, 0)
         actions.addStretch(1)
 
         content.addLayout(actions)
@@ -398,6 +420,38 @@ class _VideoCard(QFrame):
     def _open_youtube(self):
         QDesktopServices.openUrl(QUrl(self._video.url))
 
+    # ── Watched state ─────────────────────────────────────────────────── #
+
+    def is_watched(self) -> bool:
+        return self._video.watched
+
+    def _toggle_watched(self):
+        self._video.watched = not self._video.watched
+        self._apply_watched_style()
+        self.watched_toggled.emit(self)
+
+    def _apply_watched_style(self):
+        """Dim the card and update the button label to reflect watched state."""
+        watched = self._video.watched
+        if self._watched_btn is not None:
+            self._watched_btn.setText(
+                i18n.tr("btn_card_mark_unwatched") if watched
+                else i18n.tr("btn_card_mark_watched")
+            )
+        # Dynamic property lets QSS style the watched card (e.g. muted title).
+        self.setProperty("watched", "true" if watched else "false")
+        self.style().unpolish(self)
+        self.style().polish(self)
+        # Visually fade watched cards.
+        if watched:
+            if self._dim_effect is None:
+                self._dim_effect = QGraphicsOpacityEffect(self)
+            self._dim_effect.setOpacity(0.45)
+            self.setGraphicsEffect(self._dim_effect)
+        else:
+            self.setGraphicsEffect(None)
+            self._dim_effect = None
+
 
 # ─────────────────────────────────────────────────────────────────────────── #
 #  Main window                                                                #
@@ -419,6 +473,7 @@ class MainWindow(QMainWindow):
         self._worker: _FetchWorker | None = None
         self._current_videos: list[Video] = []
         self._cards: list[_VideoCard] = []
+        self._sort_modes = ["newest", "oldest", "longest", "shortest"]
         self._expanded_card: _VideoCard | None = None
         self._tray: QSystemTrayIcon | None = None
         self._bg_worker       = None
@@ -554,9 +609,37 @@ class MainWindow(QMainWindow):
         self._search_input.setObjectName("search_input")
         self._search_input.setClearButtonEnabled(True)
         self._search_input.setPlaceholderText(i18n.tr("search_placeholder"))
-        self._search_input.textChanged.connect(self._apply_search)
-        layout.addWidget(self._search_input)
+        self._search_input.textChanged.connect(self._apply_filters)
+        layout.addWidget(self._search_input, 1)
+
+        # Channel filter
+        self._channel_filter = QComboBox()
+        self._channel_filter.setObjectName("channel_filter")
+        self._channel_filter.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._channel_filter.addItem(i18n.tr("filter_channel_all"), "")
+        self._channel_filter.currentIndexChanged.connect(self._apply_filters)
+        layout.addWidget(self._channel_filter, 0)
+
+        # Sort selector
+        self._sort_combo = QComboBox()
+        self._sort_combo.setObjectName("sort_combo")
+        self._sort_combo.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._populate_sort_combo()
+        self._sort_combo.currentIndexChanged.connect(self._apply_filters)
+        layout.addWidget(self._sort_combo, 0)
+
+        # Unwatched-only toggle
+        self._unwatched_check = QCheckBox(i18n.tr("filter_unwatched"))
+        self._unwatched_check.setObjectName("unwatched_check")
+        self._unwatched_check.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._unwatched_check.stateChanged.connect(self._apply_filters)
+        layout.addWidget(self._unwatched_check, 0)
         return wrap
+
+    def _populate_sort_combo(self):
+        self._sort_combo.clear()
+        for mode in self._sort_modes:
+            self._sort_combo.addItem(i18n.tr(f"sort_{mode}"), mode)
 
     def _make_status_bar(self) -> QWidget:
         bar = QWidget()
@@ -592,6 +675,13 @@ class MainWindow(QMainWindow):
         self._settings_btn.setText(i18n.tr("btn_settings"))
         self._chat_btn.setText(i18n.tr("btn_chat_ai"))
         self._search_input.setPlaceholderText(i18n.tr("search_placeholder"))
+        self._channel_filter.setItemText(0, i18n.tr("filter_channel_all"))
+        self._unwatched_check.setText(i18n.tr("filter_unwatched"))
+        sort_idx = self._sort_combo.currentIndex()
+        self._sort_combo.blockSignals(True)
+        self._populate_sort_combo()
+        self._sort_combo.setCurrentIndex(max(sort_idx, 0))
+        self._sort_combo.blockSignals(False)
         self._status_hint.setText(i18n.tr("statusbar_hint"))
         self._update_count_label()
         if self._tray:
@@ -601,12 +691,55 @@ class MainWindow(QMainWindow):
     #  Search                                                             #
     # ─────────────────────────────────────────────────────────────────── #
 
-    def _apply_search(self, text: str):
-        needle = text.strip().lower()
-        for card in self._cards:
-            card.setVisible(not needle or needle in card.search_text())
+    def _apply_filters(self, *_):
+        """Apply search text, channel filter, unwatched filter and sorting.
+
+        Cards are reordered in place (no re-creation, so thumbnails are kept)
+        and shown/hidden per the active filters.
+        """
+        if not self._cards:
+            return
+        needle = self._search_input.text().strip().lower()
+        channel = self._channel_filter.currentData() or ""
+        unwatched_only = self._unwatched_check.isChecked()
+        sort_mode = self._sort_combo.currentData() or "newest"
+
+        sorters = {
+            "newest":   (lambda c: c.video.published_at, True),
+            "oldest":   (lambda c: c.video.published_at, False),
+            "longest":  (lambda c: c.duration_seconds(), True),
+            "shortest": (lambda c: c.duration_seconds(), False),
+        }
+        key, reverse = sorters.get(sort_mode, sorters["newest"])
+        ordered = sorted(self._cards, key=key, reverse=reverse)
+
+        # Re-insert cards in sorted order before the trailing stretch.
+        for card in ordered:
+            self._videos_layout.removeWidget(card)
+        for i, card in enumerate(ordered):
+            self._videos_layout.insertWidget(i, card)
+            visible = (
+                (not needle or needle in card.search_text())
+                and (not channel or card.video.channel_id == channel)
+                and (not unwatched_only or not card.is_watched())
+            )
+            card.setVisible(visible)
+
         self._videos_layout.invalidate()
         self._videos_container.adjustSize()
+
+    def _populate_channel_filter(self, videos: list[Video]):
+        """Rebuild the channel dropdown from the current video list."""
+        self._channel_filter.blockSignals(True)
+        self._channel_filter.clear()
+        self._channel_filter.addItem(i18n.tr("filter_channel_all"), "")
+        seen: dict[str, str] = {}
+        for v in videos:
+            if v.channel_id and v.channel_id not in seen:
+                seen[v.channel_id] = v.channel_title or i18n.tr("card_no_channel")
+        for cid, name in sorted(seen.items(), key=lambda kv: kv[1].lower()):
+            self._channel_filter.addItem(name, cid)
+        self._channel_filter.blockSignals(False)
 
     # ─────────────────────────────────────────────────────────────────── #
     #  AI Chat                                                            #
@@ -717,6 +850,7 @@ class MainWindow(QMainWindow):
 
     def _on_videos_loaded(self, videos: list[Video]):
         self._current_videos = videos
+        self._populate_channel_filter(videos)
         self._render_videos(videos)
         if self._chat_widget.isVisible():
             self._chat_widget.set_videos(videos, self._current_period)
@@ -731,9 +865,17 @@ class MainWindow(QMainWindow):
 
     def _update_count_label(self):
         count = len(self._current_videos)
-        self._count_label.setText(
-            i18n.tr("video_count_fmt").format(count=count, noun=_video_noun(count))
-        )
+        unwatched = sum(1 for v in self._current_videos if not v.watched)
+        if unwatched < count:
+            self._count_label.setText(
+                i18n.tr("video_count_unwatched_fmt").format(
+                    count=count, noun=_video_noun(count), unwatched=unwatched
+                )
+            )
+        else:
+            self._count_label.setText(
+                i18n.tr("video_count_fmt").format(count=count, noun=_video_noun(count))
+            )
 
     def _on_fetch_error(self, message: str):
         self._set_idle()
@@ -756,21 +898,29 @@ class MainWindow(QMainWindow):
         for video in videos:
             card = _VideoCard(video)
             card.expanded.connect(self._on_card_expanded)
+            card.watched_toggled.connect(self._on_card_watched_toggled)
             self._cards.append(card)
             self._videos_layout.addWidget(card)
 
         # Absorb any leftover height so rows keep their natural size at the top.
         self._videos_layout.addStretch(1)
 
-        # Re-apply any active search filter to the fresh cards.
-        if self._search_input.text().strip():
-            self._apply_search(self._search_input.text())
+        # Apply active filters/sort to the fresh cards.
+        self._apply_filters()
 
     def _on_card_expanded(self, card: _VideoCard):
         """Accordion: collapse the previously expanded card."""
         if self._expanded_card is not None and self._expanded_card is not card:
             self._expanded_card.collapse()
         self._expanded_card = card
+
+    def _on_card_watched_toggled(self, card: _VideoCard):
+        """Persist the watched state, refresh the counter and re-apply filters."""
+        self._db.set_watched(card.video.video_id, card.is_watched())
+        self._update_count_label()
+        # If "unwatched only" is active, a just-watched card should disappear.
+        if self._unwatched_check.isChecked():
+            self._apply_filters()
 
     def _make_empty_state(self) -> QWidget:
         w = QWidget()

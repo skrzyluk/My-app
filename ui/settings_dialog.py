@@ -171,7 +171,7 @@ class SettingsDialog(QDialog):
         model_row = QHBoxLayout()
         model_row.addWidget(QLabel(i18n.tr("lbl_ollama_model")))
         self._ollama_model_input = QLineEdit()
-        self._ollama_model_input.setPlaceholderText("llama3.2")
+        self._ollama_model_input.setPlaceholderText("gemma4:e4b")
         model_row.addWidget(self._ollama_model_input, stretch=1)
         layout.addLayout(model_row)
 
@@ -259,7 +259,7 @@ class SettingsDialog(QDialog):
     def _test_ollama(self):
         """Sprawdź połączenie z Ollama i dostępność modelu."""
         url   = self._ollama_url_input.text().strip() or "http://localhost:11434"
-        model = self._ollama_model_input.text().strip() or "llama3.2"
+        model = self._ollama_model_input.text().strip() or "gemma4:e4b"
         try:
             import requests
             r = requests.get(f"{url.rstrip('/')}/api/tags", timeout=5)
@@ -315,7 +315,7 @@ class SettingsDialog(QDialog):
             self._ollama_url_input.text().strip() or "http://localhost:11434"
         )
         self._app_settings.set_ollama_model(
-            self._ollama_model_input.text().strip() or "llama3.2"
+            self._ollama_model_input.text().strip() or "gemma4:e4b"
         )
 
         self.accept()

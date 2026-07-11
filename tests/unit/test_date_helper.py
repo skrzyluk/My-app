@@ -1,7 +1,29 @@
 import pytest
 from datetime import timezone
 from unittest.mock import patch
-from utils.date_helper import get_cutoff_date, parse_iso_duration, parse_youtube_datetime
+from utils.date_helper import (
+    get_cutoff_date, parse_iso_duration, parse_youtube_datetime, duration_to_seconds,
+)
+
+
+class TestDurationToSeconds:
+    def test_minutes_seconds(self):
+        assert duration_to_seconds("12:00") == 720
+
+    def test_hours_minutes_seconds(self):
+        assert duration_to_seconds("1:05:00") == 3900
+
+    def test_short(self):
+        assert duration_to_seconds("0:30") == 30
+
+    def test_empty_is_zero(self):
+        assert duration_to_seconds("") == 0
+
+    def test_unparseable_is_zero(self):
+        assert duration_to_seconds("live") == 0
+
+    def test_ordering(self):
+        assert duration_to_seconds("5:00") < duration_to_seconds("40:00") < duration_to_seconds("1:00:00")
 
 
 class TestGetCutoffDate:

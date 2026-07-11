@@ -27,9 +27,10 @@ from PyQt6.QtWidgets import (
     QScrollArea, QFrame, QLineEdit, QSizePolicy, QApplication,
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
-from PyQt6.QtGui import QFont, QKeyEvent
+from PyQt6.QtGui import QFont, QKeyEvent, QColor, QPalette
 
 import i18n
+from utils.chat_render import to_html
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -75,27 +76,73 @@ class _AskWorker(QThread):
 # ─────────────────────────────────────────────────────────────────────────── #
 
 class _MessageBubble(QFrame):
-    def __init__(self, text: str, role: str, parent=None):
+    def __init__(self, text: str, role: str, parent=None,
+                 title_urls: dict | None = None, show_copy: bool = False,
+                 rich: bool = True):
         super().__init__(parent)
         # role: "user" | "assistant" | "system"
         self.setObjectName(f"bubble_{role}")
+        self._raw_text   = text
+        self._title_urls = title_urls or {}
+        self._rich       = rich
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 7, 10, 7)
-        layout.setSpacing(0)
+        layout.setSpacing(4)
 
-        lbl = QLabel(text)
+        lbl = QLabel()
         lbl.setWordWrap(True)
         lbl.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
             | Qt.TextInteractionFlag.TextSelectableByKeyboard
+            | Qt.TextInteractionFlag.LinksAccessibleByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
         )
         lbl.setOpenExternalLinks(True)
-        lbl.setTextFormat(Qt.TextFormat.PlainText)
+        lbl.setTextFormat(
+            Qt.TextFormat.RichText if rich else Qt.TextFormat.PlainText
+        )
+        # Kolor linkow zalezny od tla babelka (bialy na akcencie, indygo na karcie)
+        pal = lbl.palette()
+        link_color = QColor("#ffffff") if role == "user" else QColor("#8b93ff")
+        pal.setColor(QPalette.ColorRole.Link, link_color)
+        lbl.setPalette(pal)
         layout.addWidget(lbl)
         self._lbl = lbl
+        self._render(text)
+
+        if show_copy:
+            row = QHBoxLayout()
+            row.setContentsMargins(0, 0, 0, 0)
+            row.addStretch()
+            self._copy_btn = QPushButton("⧉")
+            self._copy_btn.setObjectName("chat_copy_btn")
+            self._copy_btn.setFixedSize(24, 20)
+            self._copy_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self._copy_btn.setToolTip(i18n.tr("chat_copy"))
+            self._copy_btn.clicked.connect(self._copy)
+            row.addWidget(self._copy_btn)
+            layout.addLayout(row)
+
+    def _render(self, text: str):
+        if self._rich:
+            self._lbl.setText(to_html(text, self._title_urls))
+        else:
+            self._lbl.setText(text)
+
+    def _copy(self):
+        QApplication.clipboard().setText(self._raw_text)
+        self._copy_btn.setText("✓")
+        self._copy_btn.setToolTip(i18n.tr("chat_copied"))
+        QTimer.singleShot(1200, self._reset_copy_icon)
+
+    def _reset_copy_icon(self):
+        self._copy_btn.setText("⧉")
+        self._copy_btn.setToolTip(i18n.tr("chat_copy"))
 
     def set_text(self, text: str):
-        self._lbl.setText(text)
+        self._raw_text = text
+        self._render(text)
 
 
 # ─────────────────────────────────────────────────────────────────────────── #
@@ -117,6 +164,7 @@ class AiChatWidget(QWidget):
 
         self._session = None          # ChatSession (created lazily)
         self._videos  = []
+        self._period  = "week"
         self._worker: _AskWorker | None = None
         self._typing_bubble: _MessageBubble | None = None
         self._dots_timer = QTimer(self)
@@ -205,6 +253,14 @@ class AiChatWidget(QWidget):
         self._live.setObjectName("chat_live")
         layout.addWidget(self._live)
 
+        new_btn = QPushButton("🗑")
+        new_btn.setObjectName("chat_new_btn")
+        new_btn.setFixedSize(28, 28)
+        new_btn.setToolTip(i18n.tr("chat_new"))
+        new_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        new_btn.clicked.connect(self._new_chat)
+        layout.addWidget(new_btn)
+
         close_btn = QPushButton("✕")
         close_btn.setObjectName("chat_close_btn")
         close_btn.setFixedSize(28, 28)
@@ -272,13 +328,31 @@ class AiChatWidget(QWidget):
         welcome = i18n.tr("chat_welcome").format(count=len(videos), period=label)
         self._add_bubble(welcome, "assistant")
 
-    def _add_bubble(self, text: str, role: str) -> _MessageBubble:
-        bubble = _MessageBubble(text, role)
+    def _add_bubble(self, text: str, role: str, *, show_copy: bool = False,
+                    link_titles: bool = False, rich: bool = True) -> _MessageBubble:
+        bubble = _MessageBubble(
+            text, role,
+            title_urls=self._title_urls() if link_titles else None,
+            show_copy=show_copy,
+            rich=rich,
+        )
         # Insert before the trailing stretch
         idx = max(self._msg_layout.count() - 1, 0)
         self._msg_layout.insertWidget(idx, bubble)
         QTimer.singleShot(30, self._scroll_to_bottom)
         return bubble
+
+    def _title_urls(self) -> dict:
+        """Mapowanie tytul filmu -> URL, do klikalnych tytulow w odpowiedziach."""
+        result = {}
+        for v in self._videos:
+            if hasattr(v, "title"):
+                title, url = v.title, getattr(v, "url", "")
+            else:
+                title, url = v.get("title", ""), v.get("url", "")
+            if title and url:
+                result[title] = url
+        return result
 
     def _scroll_to_bottom(self):
         sb = self._scroll.verticalScrollBar()
@@ -289,7 +363,7 @@ class AiChatWidget(QWidget):
     # ─────────────────────────────────────────────────────────────────── #
 
     def _start_typing(self):
-        self._typing_bubble = self._add_bubble("●", "assistant")
+        self._typing_bubble = self._add_bubble("●", "assistant", rich=False)
         self._dots_count = 0
         self._dots_timer.start()
 
@@ -308,6 +382,14 @@ class AiChatWidget(QWidget):
     # ─────────────────────────────────────────────────────────────────── #
     #  Send logic                                                         #
     # ─────────────────────────────────────────────────────────────────── #
+
+    def _new_chat(self):
+        """Wyczysc rozmowe i zresetuj sesje (bez przeladowania listy filmow)."""
+        if self._worker and self._worker.isRunning():
+            return
+        self._stop_typing()
+        self._session = None
+        self._reset_conversation(self._videos, self._period)
 
     def _on_send(self):
         text = self._input.text().strip()
@@ -343,7 +425,7 @@ class AiChatWidget(QWidget):
 
     def _on_reply(self, text: str):
         self._stop_typing()
-        self._add_bubble(text, "assistant")
+        self._add_bubble(text, "assistant", show_copy=True, link_titles=True)
 
     def _on_error(self, msg: str):
         self._stop_typing()

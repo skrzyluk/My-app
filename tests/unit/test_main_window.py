@@ -163,6 +163,95 @@ class TestButtons:
         w._on_videos_loaded([])
         assert not w._copy_all_btn.isEnabled()
 
+
+def _vid(vid, ch="UC1", cht="Alpha", dur="10:00", days=1):
+    return Video(
+        video_id=vid, channel_id=ch, title=f"Film {vid}", description="opis",
+        url=f"https://youtu.be/{vid}", duration=dur,
+        published_at=datetime.now(tz=timezone.utc) - timedelta(days=days),
+        channel_title=cht,
+    )
+
+
+def _layout_order(w):
+    return [
+        wd.video.video_id
+        for i in range(w._videos_layout.count())
+        if isinstance((wd := w._videos_layout.itemAt(i).widget()), _VideoCard)
+    ]
+
+
+def _shown(w):
+    return sorted(
+        wd.video.video_id
+        for i in range(w._videos_layout.count())
+        if isinstance((wd := w._videos_layout.itemAt(i).widget()), _VideoCard)
+        and not wd.isHidden()
+    )
+
+
+class TestFiltersAndSort:
+    _VIDS = [
+        ("a", "UC1", "Alpha", "5:00", 1),
+        ("b", "UC2", "Beta", "40:00", 3),
+        ("c", "UC1", "Alpha", "1:00:00", 2),
+    ]
+
+    def _load(self, w):
+        w._on_videos_loaded([_vid(*args) for args in self._VIDS])
+
+    def test_channel_filter_populated(self, window):
+        w, _ = window
+        self._load(w)
+        labels = [w._channel_filter.itemText(i) for i in range(w._channel_filter.count())]
+        assert "Alpha" in labels and "Beta" in labels
+
+    def test_sort_longest(self, window):
+        w, _ = window
+        self._load(w)
+        w._sort_combo.setCurrentIndex(w._sort_modes.index("longest"))
+        assert _layout_order(w) == ["c", "b", "a"]
+
+    def test_sort_shortest(self, window):
+        w, _ = window
+        self._load(w)
+        w._sort_combo.setCurrentIndex(w._sort_modes.index("shortest"))
+        assert _layout_order(w) == ["a", "b", "c"]
+
+    def test_channel_filter_hides_others(self, window):
+        w, _ = window
+        self._load(w)
+        idx = next(i for i in range(w._channel_filter.count())
+                   if w._channel_filter.itemData(i) == "UC1")
+        w._channel_filter.setCurrentIndex(idx)
+        assert _shown(w) == ["a", "c"]
+
+    def test_search_filter(self, window):
+        w, _ = window
+        self._load(w)
+        w._search_input.setText("Film b")
+        assert _shown(w) == ["b"]
+
+
+class TestWatched:
+    def test_toggle_persists_and_counts(self, window):
+        w, mock = window
+        w._on_videos_loaded([_vid("a"), _vid("b")])
+        card_a = next(c for c in w._cards if c.video.video_id == "a")
+        card_a._toggle_watched()
+        # persisted to DB
+        w._db.set_watched.assert_called_with("a", True)
+        # counter shows unwatched
+        assert "1" in w._count_label.text()
+        assert card_a.is_watched()
+
+    def test_unwatched_only_hides_watched(self, window):
+        w, _ = window
+        w._on_videos_loaded([_vid("a"), _vid("b")])
+        next(c for c in w._cards if c.video.video_id == "a")._toggle_watched()
+        w._unwatched_check.setChecked(True)
+        assert _shown(w) == ["b"]
+
     def test_copy_all_btn_enabled_when_videos(self, window):
         w, _ = window
         w._on_videos_loaded([_make_video()])

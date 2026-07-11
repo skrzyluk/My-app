@@ -67,7 +67,27 @@ class AppSettings:
         return self.get("ollama_url", "http://localhost:11434") or "http://localhost:11434"
 
     def ollama_model(self) -> str:
-        return self.get("ollama_model", "llama3.2") or "llama3.2"
+        return self.get("ollama_model", "llama3.2:3b") or "llama3.2:3b"
+
+    def ollama_num_gpu(self) -> int:
+        """Liczba warstw offloadowanych na GPU.
+
+        999 = pelny offload na GPU (domyslne, Nvidia). Jednolity backend unika
+        crasha llama-server przy czesciowym offloadzie
+        (GGML_SCHED_MAX_SPLIT_INPUTS). 0 = wszystko na CPU.
+        """
+        try:
+            return int(self.get("ollama_num_gpu", 999))
+        except (TypeError, ValueError):
+            return 999
+
+    def ollama_temperature(self) -> float:
+        """Temperatura generacji. Niska (0.2) = model trzyma sie listy filmow
+        i nie halucynuje tytulow spoza kontekstu."""
+        try:
+            return float(self.get("ollama_temperature", 0.1))
+        except (TypeError, ValueError):
+            return 0.1
 
     def set_ai_provider(self, provider: str) -> None:
         self.set("ai_provider", provider)

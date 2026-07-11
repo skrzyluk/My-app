@@ -1,19 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 """PyInstaller spec for YouTube Notifier — one-file, no console window."""
-import os
 from pathlib import Path
 
 block_cipher = None
 
-# Bundle client_secrets.json from APPDATA if present.
-# It lands at _MEIPASS root, matching get_client_secrets_path() in utils/constants.py.
-_secrets_src = Path(os.environ.get("APPDATA", ".")) / "YouTubeNotifier" / "client_secrets.json"
+# client_secrets.json is NOT bundled into the exe. At runtime the frozen app reads
+# it from %APPDATA%\YouTubeNotifier\ (see get_client_secrets_path() in utils/constants.py).
 _datas = [
     ("i18n", "i18n"),
     ("resources", "resources"),
 ]
-if _secrets_src.exists():
-    _datas.append((str(_secrets_src), "."))
 
 a = Analysis(
     ["main.py"],

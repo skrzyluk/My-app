@@ -20,7 +20,7 @@ def main():
     apply_theme(app, s.theme(), white_text=s.white_text(), font_scale=s.font_size())
 
     window = LoginWindow()
-    window.show()
+    window.start()
 
     sys.exit(app.exec())
 

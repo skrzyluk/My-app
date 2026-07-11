@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS videos (
     channel_title TEXT NOT NULL DEFAULT '',
     published_at TEXT NOT NULL,
     fetched_at   TEXT NOT NULL,
-    cached_until TEXT NOT NULL
+    cached_until TEXT NOT NULL,
+    watched      INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS summaries (
@@ -70,12 +71,24 @@ class Database:
         fetched_at = now.isoformat()
 
         with self._conn:
+            # ON CONFLICT ... DO UPDATE (nie REPLACE) aby zachowac flage `watched`
+            # przy ponownym pobraniu tego samego filmu.
             self._conn.executemany(
                 """
-                INSERT OR REPLACE INTO videos
+                INSERT INTO videos
                     (video_id, channel_id, title, description, url, duration,
                      channel_title, published_at, fetched_at, cached_until)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(video_id) DO UPDATE SET
+                    channel_id=excluded.channel_id,
+                    title=excluded.title,
+                    description=excluded.description,
+                    url=excluded.url,
+                    duration=excluded.duration,
+                    channel_title=excluded.channel_title,
+                    published_at=excluded.published_at,
+                    fetched_at=excluded.fetched_at,
+                    cached_until=excluded.cached_until
                 """,
                 [
                     (
@@ -135,6 +148,14 @@ class Database:
         now = _utcnow().isoformat()
         with self._conn:
             self._conn.execute("DELETE FROM videos WHERE cached_until <= ?", (now,))
+
+    def set_watched(self, video_id: str, watched: bool) -> None:
+        """Persist the user-toggled 'watched' state for a video."""
+        with self._conn:
+            self._conn.execute(
+                "UPDATE videos SET watched = ? WHERE video_id = ?",
+                (1 if watched else 0, video_id),
+            )
 
     # ------------------------------------------------------------------ #
     # Summaries                                                           #
@@ -227,6 +248,12 @@ class Database:
                     "ALTER TABLE videos ADD COLUMN channel_title TEXT NOT NULL DEFAULT ''"
                 )
             logger.info("Migrated videos table: added channel_title column.")
+        if "watched" not in cols:
+            with self._conn:
+                self._conn.execute(
+                    "ALTER TABLE videos ADD COLUMN watched INTEGER NOT NULL DEFAULT 0"
+                )
+            logger.info("Migrated videos table: added watched column.")
 
 
 # ------------------------------------------------------------------ #
@@ -247,6 +274,7 @@ def _row_to_video(row: sqlite3.Row) -> Video:
         duration=row["duration"],
         published_at=parse_youtube_datetime(row["published_at"]),
         channel_title=row["channel_title"] if "channel_title" in row.keys() else "",
+        watched=bool(row["watched"]) if "watched" in row.keys() else False,
     )
 
 
