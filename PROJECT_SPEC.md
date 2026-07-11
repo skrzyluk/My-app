@@ -25,7 +25,7 @@ GUI Framework:      PyQt6
 State Management:   PyQt6 signals/slots
 Local Database:     SQLite (wbudowany sqlite3)
 API:                YouTube Data API v3
-Asystent AI:        Google Gemini (google-genai) – panel boczny
+Asystent AI:        Lokalny model przez Ollama (llama3.2:3b) – panel boczny
 Autentykacja:       OAuth 2.0 (google-auth-oauthlib)
 Bezpieczne hasła:   keyring (Windows Credential Manager)
 Powiadomienia:      winotify (Windows toast notifications)
@@ -376,11 +376,11 @@ youtube_notifier/
 │   ├── main_window.py             # Główne okno
 │   ├── settings_dialog.py         # Dialog ustawień
 │   ├── history_dialog.py          # Dialog historii
-│   └── ai_chat_widget.py          # Boczny panel asystenta AI (Gemini)
+│   └── ai_chat_widget.py          # Boczny panel asystenta AI (Ollama)
 ├── services/
 │   ├── auth_service.py            # OAuth 2.0 + keyring
 │   ├── youtube_service.py         # YouTube API calls
-│   ├── ai_service.py              # Gemini chat session + keyring (klucz API)
+│   ├── ai_service.py              # Ollama chat session (lokalny model)
 │   └── notification_service.py    # winotify wrapper
 ├── workers/
 │   └── background_worker.py       # QThread + QTimer
@@ -484,7 +484,7 @@ youtube_notifier/
 - [x] Własny widget `VideoCard` (miniatura 16:9, badge NOWY, avatar kanału, opis „Pokaż więcej/mniej", przyciski Kopiuj/YouTube)
 - [x] Toolbar (taby + licznik + akcje), pasek wyszukiwania (filtrowanie na żywo), status bar
 - [x] Redesign dialogu Ustawień (paleta motywów, rozmiar czcionki, białe czcionki, język, powiadomienia, klucz AI)
-- [x] **Panel AI (Gemini)** – boczny asystent z dostępem wyłącznie do pobranych filmów (`ui/ai_chat_widget.py`, `services/ai_service.py`)
+- [x] **Panel AI (Ollama)** – lokalny asystent z dostępem wyłącznie do pobranych filmów (`ui/ai_chat_widget.py`, `services/ai_service.py`); klikalne linki/tytuły, Markdown, kopiowanie, „Nowy czat"
 
 ### Phase 10: Testy + Polish
 - [ ] `pytest --cov` → ≥80% coverage
@@ -493,9 +493,17 @@ youtube_notifier/
 - [ ] Edge cases: brak internetu, 0 subskrypcji, quota exceeded
 
 ### Phase 11: Build & Dystrybucja
-- [ ] `build.spec` (PyInstaller, one-file – pojedynczy `.exe`)
+- [x] `build.spec` (PyInstaller, one-file – pojedynczy `.exe`)
+- [x] `client_secrets.json` czytany z `%APPDATA%` (nie wbudowany w exe)
 - [ ] Test `.exe` na czystym Windows 10 (bez Pythona)
 - [ ] Opcjonalnie: Inno Setup installer
+
+### Phase 12: Rozbudowa listy i czatu ✅
+- [x] Status „obejrzane" per film (kolumna `watched`, migracja, zachowany przy odświeżeniu) + licznik nieobejrzanych
+- [x] Filtry: po kanale, „tylko nieobejrzane"
+- [x] Sortowanie: Najnowsze / Najstarsze / Najdłuższe / Najkrótsze
+- [x] Czat: klikalne linki i tytuły filmów, Markdown, kopiowanie odpowiedzi, „Nowy czat"
+- [x] Automatyczne logowanie – pominięcie ekranu logowania przy zapisanej sesji
 
 ---
 

@@ -6,12 +6,16 @@ Aplikacja desktopowa dla Windows śledząca nowe filmy z subskrybowanych kanał�
 
 - Przeglądanie nowych filmów z okresu: Dzisiaj / Tydzień / Miesiąc
 - Widok kafelkowy z miniaturami, awatarami kanałów i skróconym opisem
-- Boczny panel asystenta AI (Google Gemini) z dostępem do pobranych filmów
+- **Status „obejrzane"** — oznaczanie filmów jako obejrzane (przygaszenie karty) i licznik nieobejrzanych
+- **Filtry i sortowanie** — po kanale, „tylko nieobejrzane", sortowanie: Najnowsze / Najstarsze / Najdłuższe / Najkrótsze
+- Wyszukiwarka filmów na żywo
+- **Lokalny asystent AI (Ollama)** rozmawiający wyłącznie o pobranych filmach — dane nie opuszczają urządzenia
 - 7 motywów kolorystycznych (5 ciemnych + jasny + wysoki kontrast)
 - Przełącznik białych czcionek i 4 rozmiary tekstu
 - System tray z menu kontekstowym i toast notifications
 - Historia podsumowań (SQLite)
 - Obsługa języków: polski / angielski (bez restartu)
+- Automatyczne logowanie — przy zapisanej sesji aplikacja pomija ekran logowania i od razu otwiera główne okno
 - Cache 24h — minimalne zużycie YouTube API quota
 
 ## Wymagania
@@ -20,6 +24,10 @@ Aplikacja desktopowa dla Windows śledząca nowe filmy z subskrybowanych kanał�
 - Python 3.11+
 - Konto Google z dostępem do YouTube
 - Plik `client_secrets.json` (Google Cloud Console — YouTube Data API v3)
+- **Do panelu AI (opcjonalnie):** [Ollama](https://ollama.com) uruchomione lokalnie oraz pobrany model:
+  ```
+  ollama pull llama3.2:3b
+  ```
 
 ## Instalacja
 
@@ -39,6 +47,30 @@ C:\Users\<user>\AppData\Roaming\YouTubeNotifier\client_secrets.json
 python main.py
 ```
 
+Przy pierwszym uruchomieniu zaloguj się przez OAuth. Przy kolejnych — jeśli sesja jest zapisana — aplikacja loguje się automatycznie i pomija ekran logowania.
+
+## Lista filmów — obejrzane, filtry, sortowanie
+
+- **Obejrzane** — przycisk „✓ Obejrzane / ↺ Nieobejrzane" na każdej karcie. Obejrzane filmy są przygaszone, a flaga jest zapisywana w bazie i **przetrwa odświeżenie** listy. Toolbar pokazuje licznik nieobejrzanych (np. „📺 12 filmów · 3 nieobejrz.").
+- **Filtr kanału** — lista rozwijana z kanałami bieżących filmów.
+- **Tylko nieobejrzane** — checkbox ukrywający obejrzane.
+- **Sortowanie** — Najnowsze / Najstarsze / Najdłuższe / Najkrótsze.
+- **Wyszukiwarka** — filtrowanie po tytule, kanale i opisie na żywo.
+
+Wszystkie filtry działają łącznie (wyszukiwarka + kanał + „tylko nieobejrzane" + sortowanie).
+
+## Panel AI (Ollama)
+
+Boczny asystent, który **rozmawia wyłącznie o pobranych filmach** — analizuje, poleca, streszcza i filtruje listę po temacie. Cała inferencja odbywa się **lokalnie przez Ollama**; dane nie opuszczają urządzenia i nie jest potrzebny żaden klucz API w chmurze.
+
+Funkcje czatu:
+- **Klikalne linki** do filmów i klikalne tytuły filmów z listy
+- **Formatowanie Markdown** (pogrubienie, kursywa, `kod`, listy)
+- **Kopiowanie odpowiedzi** i przycisk **„Nowy czat"** (reset rozmowy)
+- Szybkie podpowiedzi (np. „Podsumuj wszystkie filmy", „Co polecasz obejrzeć?")
+
+Konfiguracja w **Ustawieniach** (adres Ollama, model). Domyślnie: model `llama3.2:3b`, pełny offload na GPU, niska temperatura (trzymanie się listy filmów). Parametry `ollama_model`, `ollama_num_gpu`, `ollama_temperature` są konfigurowalne.
+
 ## Testy
 
 ```bash
@@ -48,10 +80,14 @@ pytest tests/ --cov=. --cov-report=html
 ## Build (.exe)
 
 ```powershell
-.\build.ps1
+.\venv\Scripts\python.exe -m PyInstaller build.spec --clean --noconfirm
 ```
 
-Plik wykonywalny: `dist\YouTubeNotifier.exe`
+(Skrypt `.\build.ps1` również działa, ale używa `python` z PATH — jeśli zależności są w wirtualnym środowisku, buduj przez `venv` jak wyżej.)
+
+Plik wykonywalny: `dist\YouTubeNotifier.exe` (one-file, ~58 MB, bez okna konsoli).
+
+`client_secrets.json` **nie jest wbudowywany** w exe — aplikacja czyta go w czasie działania z `%APPDATA%\YouTubeNotifier\`. Na docelowym komputerze umieść tam ten plik przed pierwszym uruchomieniem.
 
 ## Bezpieczeństwo
 
@@ -59,8 +95,8 @@ Plik wykonywalny: `dist\YouTubeNotifier.exe`
 |----|-------|
 | Refresh token OAuth 2.0 | Windows Credential Manager (keyring) |
 | Access token | RAM (tylko sesja) |
-| Klucz Gemini API | Windows Credential Manager (keyring) |
-| `client_secrets.json` | `%APPDATA%\YouTubeNotifier\` (poza repo) |
+| Asystent AI | Lokalnie (Ollama) — dane nie opuszczają urządzenia, brak klucza w chmurze |
+| `client_secrets.json` | `%APPDATA%\YouTubeNotifier\` (poza repo, nie wbudowany w exe) |
 
 Tokeny nie są nigdy zapisywane w plikach ani logach.
 
@@ -68,14 +104,15 @@ Tokeny nie są nigdy zapisywane w plikach ani logach.
 
 ```
 main.py                  # Entry point: QApplication + system tray
-ui/                      # Widgety PyQt6 (okna, dialogi, karty)
-services/                # OAuth, YouTube API, Gemini AI, powiadomienia
+ui/                      # Widgety PyQt6 (okna, dialogi, karty, panel AI)
+services/                # OAuth, YouTube API, AI (Ollama), powiadomienia
 workers/                 # QThread — sprawdzanie w tle
-database/                # SQLite CRUD
+database/                # SQLite CRUD (m.in. stan „obejrzane")
 models/                  # dataclassy: Video, Summary
-config/                  # QSettings (motyw, język, toggle)
+config/                  # QSettings (motyw, język, model AI, toggle)
 i18n/                    # Słowniki PL / EN
 resources/               # Ikony, style QSS
+utils/                   # Pomocnicze: renderowanie czatu, daty, logi
 ```
 
 ### YouTube API — flow wywołań
