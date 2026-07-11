@@ -144,4 +144,4 @@ Szacowane zużycie quota przy 50 subskrypcjach: ~54 j./dzień (limit: 10 000 j.)
 
 ## Licencja
 
-Projekt prywatny — Łukasz Skrzyluk
+Projekt prywatny — Skrzyluk
